@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from quake.data.dataset import WaveformDataset
 
 from ignite.engine import create_supervised_trainer, create_supervised_evaluator, Events
-from ignite.handlers import ProgressBar
+from ignite.handlers import ProgressBar, LRScheduler
 from ignite.metrics import Fbeta
 
 
@@ -29,21 +29,16 @@ def _register_handlers(
     pbar.attach(trainer, output_transform=lambda output: {"loss": output})
 
 
-def train_lstm(
+def train_model(
     events_train: WaveformDataset,
     events_test: WaveformDataset,
     model: nn.Module,
     batch_size: int = 32,
-    batch_size_test: int = 32
+    batch_size_test: int = 32,
+    epochs: int = 20,
+    lr: float = 0.001,
+    device: str = 'cuda'
 ) -> None:
-    trainer = create_supervised_trainer(
-        model=model,
-        optimizer=tch.optim.AdamW(model.parameters(), lr=0.001),
-        # todo adaptive learning rate
-        loss_fn=nn.CrossEntropyLoss(),
-        device='cuda' if tch.cuda.is_available() else 'cpu'
-    )
-
     loader_train = DataLoader(
         dataset=events_train,
         batch_size=batch_size,
@@ -51,20 +46,33 @@ def train_lstm(
         num_workers=4
     )
 
+    loader_test = DataLoader(
+        dataset=events_test,
+        batch_size=batch_size_test,
+        shuffle=False,
+        num_workers=4
+    )
+
+    optimizer = tch.optim.AdamW(model.parameters(), lr=lr)
+    lr_scheduler = tch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=.85)
+    lr_handler = LRScheduler(lr_scheduler)
+
+    trainer = create_supervised_trainer(
+        model=model,
+        optimizer=optimizer,
+        loss_fn=nn.CrossEntropyLoss(),
+        device=device
+    )
+
     evaluator = create_supervised_evaluator(
         model=model,
         metrics={
             'f1': Fbeta(1.0, average=True),
         },
-        device='cuda' if tch.cuda.is_available() else 'cpu'
+        device=device
     )
 
-    loader_test = DataLoader(
-       dataset=events_test,
-       batch_size=batch_size_test,
-       shuffle=False,
-       num_workers=4
-    )
-
+    trainer.add_event_handler(Events.EPOCH_COMPLETED, lr_handler)
     _register_handlers(trainer, evaluator, loader_test)
-    trainer.run(loader_train, max_epochs=10)
+
+    trainer.run(loader_train, max_epochs=epochs)
