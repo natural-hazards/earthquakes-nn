@@ -5,7 +5,7 @@ from enum import IntFlag
 from scipy import stats
 from sklearn import model_selection
 
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import LabelEncoder
 from quake.data.dataset import WaveformDataset
 
 
@@ -54,8 +54,8 @@ class WaveformDataAdapter(object):
         self.__labels: np.ndarray | None = None
         self.labels = labels
 
-        self.__ds_train: tuple | None = None
-        self.__ds_test: tuple | None = None
+        self.__ds_train: WaveformDataset | None = None
+        self.__ds_test: WaveformDataset | None = None
 
     def __del__(self) -> None:
         self.__reset()
@@ -234,12 +234,12 @@ class WaveformDataAdapter(object):
             test_size=self.test_ratio
         )
 
-        self.__ds_train = (events_train, labels_train)
-        self.__ds_test = (events_test, labels_test)
+        self.__ds_train = WaveformDataset(events=events_train, labels=labels_train)
+        self.__ds_test = WaveformDataset(events=events_test, labels=labels_test)
 
     def get_datasets(
         self
-    ) -> tuple[tuple, tuple]:
+    ) -> tuple[WaveformDataset | None, WaveformDataset | None]:
         if self.__ds_train is not None and self.__ds_test is not None:
             return self.__ds_train, self.__ds_test
 
