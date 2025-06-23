@@ -4,6 +4,7 @@ import pandas as pd
 from enum import IntFlag
 from scipy import stats
 from sklearn import model_selection
+from tqdm import tqdm
 
 from sklearn.preprocessing import LabelEncoder
 from quake.data.dataset import WaveformDataset
@@ -222,7 +223,7 @@ class WaveformDataAdapter(object):
         labels = encoder_label.fit_transform(self.labels)
 
         events = list()
-        for event in self.events:
+        for event in tqdm(self.events, desc="Processing events"):
             event = self.__process_event(
                 event=event,
                 min_length=min_length

@@ -25,8 +25,8 @@ def main() -> None:
     adapter = WaveformDataAdapter(
         events=events,
         labels=labels,
-        channels=('Z', 'N', 'E'),
-        fft_size=3090,
+        channels=channels,
+        fft_size=1500,
         transforms=TransformOP.DROP_NAN | TransformOP.TRIMMING | TransformOP.ZSCORE | TransformOP.FFT,
         test_ratio=0.3
     )
