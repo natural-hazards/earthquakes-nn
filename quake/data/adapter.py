@@ -205,9 +205,10 @@ class WaveformDataAdapter(object):
             for ch in range(event.shape[1]):
                 event[:, ch] = stats.zscore(event[:, ch])
         if self.__transforms & TransformOP.FFT == TransformOP.FFT:
-            fft_result = np.empty((self.fft_size, event.shape[1]), dtype=np.float64)
+            fft_result = np.empty((self.fft_size, event.shape[1]), dtype=np.float32)
             for ch in range(event.shape[1]):
                 fft_result[:, ch] = np.abs(np.fft.fft(event[:, ch], n=self.fft_size))
+            event = fft_result
 
         return event
 

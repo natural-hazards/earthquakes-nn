@@ -39,6 +39,7 @@ def main() -> None:
         layers=3,
         dropout=0.7
     )
+    lstm_model.to('cuda')
 
     train_model(
         events_train=events_train,
