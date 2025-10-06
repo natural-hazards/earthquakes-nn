@@ -18,7 +18,7 @@ class LSTMModel(nn.Module):
         layers: int = 3,
         dropout: float =.75
     ) -> None:
-        super().__init__()
+        super(LSTMModel, self).__init__()
 
         # recurrent layer
         self.lstm = nn.LSTM(
