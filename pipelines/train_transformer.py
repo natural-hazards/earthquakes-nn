@@ -16,15 +16,17 @@ def train_transformer(
     model = TransformerModel(
         channels=channels,
         classes=2,
-        hidden=64,
-        layers=3,
-        heads=4,
+        hidden=8,
+        layers=2,
+        heads=2,
         dropout=0.1
     ).to(device)
 
     train_model(
         events_train=events_train,
         events_test=events_test,
+        batch_size=96,
+        batch_size_test=96,
         model=model
     )
 
