@@ -196,50 +196,48 @@ class WaveformDataAdapter(object):
         self.__reset()
         self.__test_ratio = ratio
 
-    def __process_event(
+    def __process_events(
         self,
-        event: pd.DataFrame,
-        min_length: int = 0,
+        events: list[pd.DataFrame]
     ) -> np.ndarray:
-        if self.__transforms & TransformOP.DROP_NAN == TransformOP.DROP_NAN:
-            event = event.dropna()
-        if self.__transforms & TransformOP.TRIMMING == TransformOP.TRIMMING:
-            event = event[self.channels[0] if len(self.channels) == 1 else self.channels][:min_length]
+        channels = self.channels[0] if len(self.channels) == 1 else self.channels
 
-        if isinstance(event, pd.DataFrame):
-            event = event.to_numpy(dtype=np.float32)
+        # First pass: DROP_NAN and convert to numpy
+        arrays = []
+        for event in tqdm(events, desc="Converting events"):
+            if self.__transforms & TransformOP.DROP_NAN:
+                event = event.dropna()
+            arrays.append(event[channels].to_numpy(dtype=np.float32))
 
-        if self.__transforms & TransformOP.ZSCORE == TransformOP.ZSCORE:
-            for ch in range(event.shape[1]):
-                event[:, ch] = stats.zscore(event[:, ch])
-        if self.__transforms & TransformOP.FFT == TransformOP.FFT:
-            # Keep high-frequency half only (discard redundant low-frequency mirror)
+        # Trim to min length and stack
+        if self.__transforms & TransformOP.TRIMMING:
+            min_len = min(len(arr) for arr in arrays)
+            arrays = [arr[:min_len] for arr in arrays]
+
+        stacked = np.stack(arrays)  # [n_samples, seq_len, n_channels]
+
+        # Batch ZSCORE
+        if self.__transforms & TransformOP.ZSCORE:
+            for ch in range(stacked.shape[2]):
+                stacked[:, :, ch] = stats.zscore(stacked[:, :, ch], axis=1)
+
+        # Batch FFT
+        if self.__transforms & TransformOP.FFT:
             output_size = self.fft_size // 2 + 1
             start_idx = self.fft_size // 2 - 1
-            fft_result = np.empty((output_size, event.shape[1]), dtype=np.float32)
-            for ch in range(event.shape[1]):
-                fft_full = np.abs(np.fft.fft(event[:, ch], n=self.fft_size))
-                fft_result[:, ch] = fft_full[start_idx:]
-            event = fft_result
+            fft_full = np.abs(np.fft.fft(stacked, n=self.fft_size, axis=1))
+            stacked = fft_full[:, start_idx:start_idx + output_size, :].astype(np.float32)
 
-        return event
+        return stacked
 
     def __create_datasets(
         self
     ) -> None:
-        len_events: list = [len(event) for event in self.events]
-        min_length = min(len_events)
-
         encoder_label = LabelEncoder()
         labels = encoder_label.fit_transform(self.labels)
 
-        events = list()
-        for event in tqdm(self.events, desc="Processing events"):
-            event = self.__process_event(
-                event=event,
-                min_length=min_length
-            )
-            events.append(event)
+        print(f"Processing {len(self.events)} events...")
+        events = self.__process_events(list(self.events))
 
         events_train, events_test, labels_train, labels_test = model_selection.train_test_split(
             events,

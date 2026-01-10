@@ -71,17 +71,17 @@ def main() -> None:
     plt.show()
 
     # Fan chart visualization for each class
-    for label in unique:
-        class_events = [e for e, l in zip(events, labels) if l == label]
-        plot_fan_chart(
-            class_events,
-            channels=list(channels),
-            title=f'Class: {label}',
-            align=Align.TRIM,
-            zscore=True,
-            log_scale=True
-        )
-    plt.show()
+    # for label in unique:
+    #     class_events = [e for e, l in zip(events, labels) if l == label]
+    #     plot_fan_chart(
+    #         class_events,
+    #         channels=list(channels),
+    #         title=f'Class: {label}',
+    #         align=Align.TRIM,
+    #         zscore=True,
+    #         log_scale=True
+    #     )
+    # plt.show()
 
     adapter = WaveformDataAdapter(
         events=events,
