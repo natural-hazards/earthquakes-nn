@@ -16,7 +16,7 @@ class LSTMModel(nn.Module):
         classes: int = 2,
         hidden: int = 256,
         layers: int = 3,
-        dropout: float =.75
+        dropout: float = 0.75
     ) -> None:
         super(LSTMModel, self).__init__()
 
@@ -29,6 +29,9 @@ class LSTMModel(nn.Module):
             dropout=dropout
         )
 
+        # batch normalization after LSTM
+        self.batch_norm = nn.BatchNorm1d(hidden)
+
         # classification layer
         self.classifier = nn.Linear(hidden, classes)
 
@@ -38,6 +41,9 @@ class LSTMModel(nn.Module):
     ) -> tch.Tensor:
         self.lstm.flatten_parameters()
         _, (ht, _) = self.lstm(x)
-        out = ht[-1]
+        out = ht[-1]  # [batch, hidden]
+
+        # apply batch normalization
+        out = self.batch_norm(out)
 
         return self.classifier(out)
