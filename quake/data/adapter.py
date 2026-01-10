@@ -161,6 +161,13 @@ class WaveformDataAdapter(object):
     ) -> int:
         return self.__fft_size
 
+    @property
+    def fft_output_size(
+        self
+    ) -> int:
+        """Actual FFT output size (unique frequencies only): fft_size // 2 + 1"""
+        return self.__fft_size // 2 + 1
+
     @fft_size.setter
     def fft_size(
         self,
@@ -206,9 +213,13 @@ class WaveformDataAdapter(object):
             for ch in range(event.shape[1]):
                 event[:, ch] = stats.zscore(event[:, ch])
         if self.__transforms & TransformOP.FFT == TransformOP.FFT:
-            fft_result = np.empty((self.fft_size, event.shape[1]), dtype=np.float32)
+            # Keep high-frequency half only (discard redundant low-frequency mirror)
+            output_size = self.fft_size // 2 + 1
+            start_idx = self.fft_size // 2 - 1
+            fft_result = np.empty((output_size, event.shape[1]), dtype=np.float32)
             for ch in range(event.shape[1]):
-                fft_result[:, ch] = np.abs(np.fft.fft(event[:, ch], n=self.fft_size))
+                fft_full = np.abs(np.fft.fft(event[:, ch], n=self.fft_size))
+                fft_result[:, ch] = fft_full[start_idx:]
             event = fft_result
 
         return event
