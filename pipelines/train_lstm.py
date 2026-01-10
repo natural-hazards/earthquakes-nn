@@ -7,6 +7,7 @@ from quake.data.adapter import WaveformDataAdapter, TransformOP
 from quake.models.lstm import LSTMModel
 from quake.models.lstm_mhsa import LSTMAttentionModel
 from quake.procs.train import train_model
+from quake.visualization import plot_fan_chart, Align
 
 
 def train_lstm(
@@ -54,7 +55,7 @@ def main() -> None:
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     channels = ('Z', 'N', 'E')
     # path_resource = './resources/hh_selected.pkl'
-    path_resource = './resources/VRAC.pkl'
+    path_resource = './resources/MORC.pkl'
 
     events, labels = read_pickle(path_resource)
     assert len(events) == len(labels), 'Events and labels must have the same length.'
@@ -67,6 +68,19 @@ def main() -> None:
     plt.title('Event Distribution')
     plt.xlabel('Event Type')
     plt.ylabel('Count')
+    plt.show()
+
+    # Fan chart visualization for each class
+    for label in unique:
+        class_events = [e for e, l in zip(events, labels) if l == label]
+        plot_fan_chart(
+            class_events,
+            channels=list(channels),
+            title=f'Class: {label}',
+            align=Align.TRIM,
+            zscore=True,
+            log_scale=True
+        )
     plt.show()
 
     adapter = WaveformDataAdapter(
