@@ -11,7 +11,7 @@ class WaveformDataset:
 
     def __init__(
         self,
-        events: list[np.ndarray],
+        events: np.ndarray | list[np.ndarray],
         labels: np.ndarray,
     ) -> None:
         self.__events = events
