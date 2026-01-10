@@ -18,9 +18,9 @@ def train_lstm(
     model = LSTMModel(
         channels=channels,
         classes=2,
-        hidden=256,
-        layers=3,
-        dropout=0.7
+        hidden=64,
+        layers=2,
+        dropout=0.3
     ).to(device)
 
     train_model(
@@ -38,10 +38,10 @@ def train_lstm_attention(
     model = LSTMAttentionModel(
         channels=channels,
         classes=2,
-        hidden=256,
-        layers=3,
-        heads=4,
-        dropout=0.7
+        hidden=64,
+        layers=2,
+        heads=2,
+        dropout=0.3
     ).to(device)
 
     train_model(
@@ -53,7 +53,8 @@ def train_lstm_attention(
 def main() -> None:
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     channels = ('Z', 'N', 'E')
-    path_resource = './resources/hh_selected.pkl'
+    # path_resource = './resources/hh_selected.pkl'
+    path_resource = './resources/VRAC.pkl'
 
     events, labels = read_pickle(path_resource)
     assert len(events) == len(labels), 'Events and labels must have the same length.'
@@ -72,14 +73,14 @@ def main() -> None:
         events=events,
         labels=labels,
         channels=channels,
-        fft_size=128,
+        fft_size=512,
         transforms=TransformOP.DROP_NAN | TransformOP.TRIMMING | TransformOP.ZSCORE | TransformOP.FFT,
         test_ratio=0.3
     )
     events_train, events_test = adapter.get_datasets()
 
-    # train_lstm(events_train, events_test, channels=len(channels), device=device)
-    train_lstm_attention(events_train, events_test, channels=len(channels), device=device)
+    train_lstm(events_train, events_test, channels=len(channels), device=device)
+    # train_lstm_attention(events_train, events_test, channels=len(channels), device=device)
 
 if __name__ == "__main__":
     main()
