@@ -1,13 +1,31 @@
+"""
+Training Pipeline for LSTM Models
+==================================
+
+This pipeline trains LSTM-based models on seismic data. The seismic
+waveforms are converted to frequency domain using FFT transform before
+being fed to the model.
+
+Data Flow:
+    1. Load seismic events from pickle files
+    2. Visualize class distribution and fan charts
+    3. Convert waveforms to frequency domain using FFT
+    4. Train LSTM or LSTM with attention
+
+Usage:
+    python pipelines/train_lstm.py
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 
-from quake.data.loader import read_pickle
 from quake.data.adapter import WaveformDataAdapter, TransformOP
 from quake.models.lstm import LSTMModel
 from quake.models.lstm_mhsa import LSTMAttentionModel
 from quake.procs.train import train_model
-from quake.visualization import plot_fan_chart, Align
+
+from pipelines.utils import load_events, show_fan_charts
 
 
 def train_lstm(
@@ -16,6 +34,17 @@ def train_lstm(
     channels: int = 3,
     device: str = 'cuda'
 ) -> None:
+    """Train standard LSTM model.
+
+    The model processes seismic waveforms that have been converted to
+    frequency domain using FFT transform.
+
+    Args:
+        events_train: Training dataset
+        events_test: Test dataset
+        channels: Number of input channels
+        device: Device to train on ('cuda' or 'cpu')
+    """
     model = LSTMModel(
         channels=channels,
         classes=2,
@@ -36,6 +65,18 @@ def train_lstm_attention(
     channels: int = 3,
     device: str = 'cuda'
 ) -> None:
+    """Train LSTM model with multi-head self-attention.
+
+    The model processes seismic waveforms that have been converted to
+    frequency domain using FFT transform. Adds attention mechanism on top
+    of LSTM for better sequence modeling.
+
+    Args:
+        events_train: Training dataset
+        events_test: Test dataset
+        channels: Number of input channels
+        device: Device to train on ('cuda' or 'cpu')
+    """
     model = LSTMAttentionModel(
         channels=channels,
         classes=2,
@@ -54,11 +95,14 @@ def train_lstm_attention(
 def main() -> None:
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     channels = ('Z', 'N', 'E')
-    # path_resource = './resources/hh_selected.pkl'
-    path_resource = './resources/MORC.pkl'
 
-    events, labels = read_pickle(path_resource)
-    assert len(events) == len(labels), 'Events and labels must have the same length.'
+    # Load data from multiple sources
+    paths = [
+        './resources/VRAC.pkl',
+        './resources/MORC.pkl',
+        './resources/hh_all.pkl',
+    ]
+    events, labels = load_events(paths)
 
     unique, counts = np.unique(labels, return_counts=True)
     print(f'Number of events: {len(events)}')
@@ -70,18 +114,8 @@ def main() -> None:
     plt.ylabel('Count')
     plt.show()
 
-    # Fan chart visualization for each class
-    # for label in unique:
-    #     class_events = [e for e, l in zip(events, labels) if l == label]
-    #     plot_fan_chart(
-    #         class_events,
-    #         channels=list(channels),
-    #         title=f'Class: {label}',
-    #         align=Align.TRIM,
-    #         zscore=True,
-    #         log_scale=True
-    #     )
-    # plt.show()
+    # Fan charts show median waveform with quantile bands for each class
+    show_fan_charts(events, labels, channels)
 
     adapter = WaveformDataAdapter(
         events=events,
