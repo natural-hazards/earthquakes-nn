@@ -3,6 +3,7 @@ import pandas as pd
 
 from enum import IntFlag
 from scipy import stats
+from scipy.signal import stft
 from sklearn import model_selection
 from tqdm import tqdm
 
@@ -34,6 +35,8 @@ class WaveformDataAdapter(object):
         labels: np.ndarray,
         channels: list[str] | tuple[str, ...] | None = ('Z', 'N', 'E'),
         fft_size: int = 32,
+        stft_nperseg: int = 64,
+        stft_hop: int = 32,
         transforms: TransformOP = TransformOP.NONE,
         test_ratio: float = 0.3,
     ) -> None:
@@ -42,6 +45,9 @@ class WaveformDataAdapter(object):
 
         self.__fft_size = fft_size
         self.fft_size = fft_size
+
+        self.__stft_nperseg = stft_nperseg
+        self.__stft_hop = stft_hop
 
         self.__transforms = transforms
         self.transforms = transforms
@@ -135,6 +141,10 @@ class WaveformDataAdapter(object):
         if op == self.__transforms:
             return
 
+        # FFT and SPECTROGRAM are mutually exclusive
+        if (op & TransformOP.FFT) and (op & TransformOP.SPECTROGRAM):
+            raise ValueError("FFT and SPECTROGRAM transforms are mutually exclusive")
+
         self.__reset()
         self.__transforms = op
 
@@ -196,6 +206,62 @@ class WaveformDataAdapter(object):
         self.__reset()
         self.__test_ratio = ratio
 
+    @property
+    def stft_nperseg(self) -> int:
+        """STFT segment length (window size)."""
+        return self.__stft_nperseg
+
+    @stft_nperseg.setter
+    def stft_nperseg(self, value: int) -> None:
+        if value == self.__stft_nperseg:
+            return
+        self.__reset()
+        self.__stft_nperseg = value
+
+    @property
+    def stft_hop(self) -> int:
+        """STFT hop length (stride between windows)."""
+        return self.__stft_hop
+
+    @stft_hop.setter
+    def stft_hop(self, value: int) -> None:
+        if value == self.__stft_hop:
+            return
+        self.__reset()
+        self.__stft_hop = value
+
+    @property
+    def stft_freq_bins(self) -> int:
+        """Number of frequency bins in STFT output: nperseg // 2 + 1"""
+        return self.__stft_nperseg // 2 + 1
+
+    def __compute_spectrogram(self, data: np.ndarray) -> np.ndarray:
+        """Compute STFT spectrogram for all samples and channels.
+
+        Args:
+            data: Input array [n_samples, seq_len, n_channels]
+
+        Returns:
+            Spectrograms [n_samples, n_channels, freq_bins, time_frames]
+        """
+        n_samples, seq_len, n_channels = data.shape
+        noverlap = self.__stft_nperseg - self.__stft_hop
+
+        # Compute STFT for first sample to get output dimensions
+        _, _, Zxx_sample = stft(data[0, :, 0], nperseg=self.__stft_nperseg, noverlap=noverlap)
+        freq_bins, time_frames = Zxx_sample.shape
+
+        # Allocate output array
+        spectrograms = np.empty((n_samples, n_channels, freq_bins, time_frames), dtype=np.float32)
+
+        # Compute STFT for all samples and channels
+        for i in range(n_samples):
+            for ch in range(n_channels):
+                _, _, Zxx = stft(data[i, :, ch], nperseg=self.__stft_nperseg, noverlap=noverlap)
+                spectrograms[i, ch] = np.abs(Zxx).astype(np.float32)
+
+        return spectrograms
+
     def __process_events(
         self,
         events: list[pd.DataFrame]
@@ -221,12 +287,14 @@ class WaveformDataAdapter(object):
             for ch in range(stacked.shape[2]):
                 stacked[:, :, ch] = stats.zscore(stacked[:, :, ch], axis=1)
 
-        # Batch FFT
+        # Batch FFT or STFT/Spectrogram (mutually exclusive)
         if self.__transforms & TransformOP.FFT:
             output_size = self.fft_size // 2 + 1
             start_idx = self.fft_size // 2 - 1
             fft_full = np.abs(np.fft.fft(stacked, n=self.fft_size, axis=1))
             stacked = fft_full[:, start_idx:start_idx + output_size, :].astype(np.float32)
+        elif self.__transforms & TransformOP.SPECTROGRAM:
+            stacked = self.__compute_spectrogram(stacked)
 
         return stacked
 
