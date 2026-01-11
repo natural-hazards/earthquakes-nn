@@ -22,8 +22,9 @@ from torchinfo import summary
 from quake.data.adapter import WaveformDataAdapter, TransformOP
 from quake.models import Backbone, HybridViT
 from quake.procs.train import train_model
+from quake.visualization import plot_spectrogram
 
-from pipelines.utils import load_events, show_fan_charts, plot_spectrogram
+from pipelines.utils import load_events, show_fan_charts
 
 
 def train_hybrid_vit(
