@@ -19,6 +19,7 @@ Usage:
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
+from torchinfo import summary
 
 from quake.data.adapter import WaveformDataAdapter, TransformOP
 from quake.models.lstm import LSTMModel
@@ -31,6 +32,7 @@ from pipelines.utils import load_events, show_fan_charts
 def train_lstm(
     events_train,
     events_test,
+    seq_len: int,
     channels: int = 3,
     device: str = 'cuda'
 ) -> None:
@@ -42,6 +44,7 @@ def train_lstm(
     Args:
         events_train: Training dataset
         events_test: Test dataset
+        seq_len: Sequence length (number of frequency bins)
         channels: Number of input channels
         device: Device to train on ('cuda' or 'cpu')
     """
@@ -53,6 +56,8 @@ def train_lstm(
         dropout=0.3
     ).to(device)
 
+    summary(model, input_size=(1, seq_len, channels))
+
     train_model(
         events_train=events_train,
         events_test=events_test,
@@ -62,6 +67,7 @@ def train_lstm(
 def train_lstm_attention(
     events_train,
     events_test,
+    seq_len: int,
     channels: int = 3,
     device: str = 'cuda'
 ) -> None:
@@ -74,6 +80,7 @@ def train_lstm_attention(
     Args:
         events_train: Training dataset
         events_test: Test dataset
+        seq_len: Sequence length (number of frequency bins)
         channels: Number of input channels
         device: Device to train on ('cuda' or 'cpu')
     """
@@ -85,6 +92,8 @@ def train_lstm_attention(
         heads=2,
         dropout=0.3
     ).to(device)
+
+    summary(model, input_size=(1, seq_len, channels))
 
     train_model(
         events_train=events_train,
@@ -127,8 +136,13 @@ def main() -> None:
     )
     events_train, events_test = adapter.get_datasets()
 
-    train_lstm(events_train, events_test, channels=len(channels), device=device)
-    # train_lstm_attention(events_train, events_test, channels=len(channels), device=device)
+    # Get sequence length from data
+    sample = events_train[0][0]
+    seq_len = sample.shape[0]
+    print(f"Input shape: seq_len={seq_len}, channels={len(channels)}")
+
+    train_lstm(events_train, events_test, seq_len=seq_len, channels=len(channels), device=device)
+    # train_lstm_attention(events_train, events_test, seq_len=seq_len, channels=len(channels), device=device)
 
 if __name__ == "__main__":
     main()
