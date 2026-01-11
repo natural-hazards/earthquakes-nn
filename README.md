@@ -198,19 +198,6 @@ The pipeline:
 3. Converts waveforms to spectrograms using STFT
 4. Trains HybridViT with pretrained ViT backbone
 
-## Data Augmentation
-
-The `quake.data.augmentation` module provides transforms for training:
-
-```python
-from quake.data.augmentation import (
-    TimeShift,
-    AddGaussianNoise,
-    AmplitudeScale,
-    ChannelDropout
-)
-```
-
 ## References
 
 ### LSTM
