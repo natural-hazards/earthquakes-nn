@@ -116,8 +116,8 @@ train_lstm(events_train, events_test, seq_len=seq_len, channels=len(channels), d
 model = LSTMModel(
     channels=3,      # Number of input channels (Z, N, E)
     classes=2,       # Number of output classes
-    hidden=64,       # LSTM hidden dimension
-    layers=2,        # Number of LSTM layers
+    hidden=128,      # LSTM hidden dimension
+    layers=3,        # Number of LSTM layers
     dropout=0.3      # Dropout probability
 )
 ```
@@ -133,6 +133,12 @@ model = LSTMAttentionModel(
     dropout=0.3      # Dropout probability
 )
 ```
+
+### Training Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `epochs` | 30 | Number of training epochs |
 
 ## Output
 
