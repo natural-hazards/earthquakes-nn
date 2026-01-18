@@ -2,15 +2,14 @@
 Training Pipeline for LSTM Models
 ==================================
 
-This pipeline trains LSTM-based models on seismic data. The seismic
-waveforms are converted to frequency domain using FFT transform before
-being fed to the model.
+This pipeline trains LSTM-based models on seismic data with data augmentation.
+Time series augmentations are applied on-the-fly during training.
 
 Data Flow:
     1. Load seismic events from pickle files
-    2. Visualize class distribution and fan charts
-    3. Convert waveforms to frequency domain using FFT
-    4. Train LSTM or LSTM with attention
+    2. Preprocess: DROP_NAN → TRIMMING → ZSCORE
+    3. Training: augmentation → FFT → model
+    4. Testing: FFT → model (no augmentation)
 
 Usage:
     python pipelines/train_lstm.py
@@ -19,9 +18,15 @@ Usage:
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
+import torch.nn as nn
 from torchinfo import summary
 
 from quake.data.adapter import WaveformDataAdapter, TransformOP
+from quake.data.augmentation import (
+    Compose, RandomApply, TimeShift, AddNoise,
+    AmplitudeScale, TimeStretch
+)
+from quake.data.transforms import FFTTransform, ToTensor
 from quake.models.lstm import LSTMModel
 from quake.models.lstm_mhsa import LSTMAttentionModel
 from quake.procs.train import train_model
@@ -36,18 +41,7 @@ def train_lstm(
     channels: int = 3,
     device: str = 'cuda'
 ) -> None:
-    """Train standard LSTM model.
-
-    The model processes seismic waveforms that have been converted to
-    frequency domain using FFT transform.
-
-    Args:
-        events_train: Training dataset
-        events_test: Test dataset
-        seq_len: Sequence length (number of frequency bins)
-        channels: Number of input channels
-        device: Device to train on ('cuda' or 'cpu')
-    """
+    """Train standard LSTM model."""
     model = LSTMModel(
         channels=channels,
         classes=2,
@@ -61,8 +55,10 @@ def train_lstm(
     train_model(
         events_train=events_train,
         events_test=events_test,
-        model=model
+        model=model,
+        epochs=30
     )
+
 
 def train_lstm_attention(
     events_train,
@@ -71,19 +67,7 @@ def train_lstm_attention(
     channels: int = 3,
     device: str = 'cuda'
 ) -> None:
-    """Train LSTM model with multi-head self-attention.
-
-    The model processes seismic waveforms that have been converted to
-    frequency domain using FFT transform. Adds attention mechanism on top
-    of LSTM for better sequence modeling.
-
-    Args:
-        events_train: Training dataset
-        events_test: Test dataset
-        seq_len: Sequence length (number of frequency bins)
-        channels: Number of input channels
-        device: Device to train on ('cuda' or 'cpu')
-    """
+    """Train LSTM model with multi-head self-attention."""
     model = LSTMAttentionModel(
         channels=channels,
         classes=2,
@@ -100,6 +84,7 @@ def train_lstm_attention(
         events_test=events_test,
         model=model
     )
+
 
 def main() -> None:
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -126,23 +111,49 @@ def main() -> None:
     # Fan charts show median waveform with quantile bands for each class
     show_fan_charts(events, labels, channels)
 
+    # Preprocessing: z-score only (FFT done dynamically)
     adapter = WaveformDataAdapter(
         events=events,
         labels=labels,
         channels=channels,
-        fft_size=512,
-        transforms=TransformOP.DROP_NAN | TransformOP.TRIMMING | TransformOP.ZSCORE | TransformOP.FFT,
+        transforms=TransformOP.DROP_NAN | TransformOP.TRIMMING | TransformOP.ZSCORE,
         test_ratio=0.3
     )
-    events_train, events_test = adapter.get_datasets()
+
+    # FFT parameters
+    fft_size = 512
+
+    # Training transform: augmentation → FFT → tensor
+    train_transform = nn.Sequential(
+        Compose([
+            RandomApply(TimeShift(max_shift=0.1), p=0.5),
+            RandomApply(AddNoise(snr_min=15, snr_max=40), p=0.5),
+            RandomApply(AmplitudeScale(0.9, 1.1), p=0.3),
+            RandomApply(TimeStretch(0.95, 1.05), p=0.3),
+        ]),
+        FFTTransform(fft_size=fft_size),
+        ToTensor(),
+    )
+
+    # Test transform: FFT → tensor (no augmentation)
+    test_transform = nn.Sequential(
+        FFTTransform(fft_size=fft_size),
+        ToTensor(),
+    )
+
+    events_train, events_test = adapter.get_datasets(
+        transform_train=train_transform,
+        transform_test=test_transform
+    )
 
     # Get sequence length from data
-    sample = events_train[0][0]
+    sample, _ = events_train[0]
     seq_len = sample.shape[0]
     print(f"Input shape: seq_len={seq_len}, channels={len(channels)}")
 
     train_lstm(events_train, events_test, seq_len=seq_len, channels=len(channels), device=device)
     # train_lstm_attention(events_train, events_test, seq_len=seq_len, channels=len(channels), device=device)
+
 
 if __name__ == "__main__":
     main()
