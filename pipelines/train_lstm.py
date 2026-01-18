@@ -45,8 +45,8 @@ def train_lstm(
     model = LSTMModel(
         channels=channels,
         classes=2,
-        hidden=64,
-        layers=2,
+        hidden=128,
+        layers=3,
         dropout=0.3
     ).to(device)
 
