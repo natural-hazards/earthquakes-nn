@@ -3,7 +3,6 @@ import pandas as pd
 
 from enum import IntFlag
 from scipy import stats
-from scipy.signal import stft
 from sklearn import model_selection
 from tqdm import tqdm
 
@@ -23,8 +22,6 @@ class TransformOP(IntFlag):
     TRIMMING = 1 << 3
     ZSCORE = 1 << 4
     PCA = 1 << 5
-    FFT = 1 << 6
-    SPECTROGRAM = 1 << 7
 
 
 class WaveformDataAdapter(object):
@@ -34,20 +31,11 @@ class WaveformDataAdapter(object):
         events: list[pd.DataFrame] | tuple[pd.DataFrame, ...],
         labels: np.ndarray,
         channels: list[str] | tuple[str, ...] | None = ('Z', 'N', 'E'),
-        fft_size: int = 32,
-        stft_nperseg: int = 64,
-        stft_hop: int = 32,
         transforms: TransformOP = TransformOP.NONE,
         test_ratio: float = 0.3,
     ) -> None:
         self.__channels: list[str] | tuple[str, ...] | None = None
         self.channels = channels
-
-        self.__fft_size = fft_size
-        self.fft_size = fft_size
-
-        self.__stft_nperseg = stft_nperseg
-        self.__stft_hop = stft_hop
 
         self.__transforms = transforms
         self.transforms = transforms
@@ -68,11 +56,11 @@ class WaveformDataAdapter(object):
         self.__reset()
 
     def __reset(self) -> None:
-        if hasattr(self, '__ds_train'):
+        if hasattr(self, '_WaveformDataAdapter__ds_train'):
             del self.__ds_train
             self.__ds_train = None
 
-        if hasattr(self, '__ds_test'):
+        if hasattr(self, '_WaveformDataAdapter__ds_test'):
             del self.__ds_test
             self.__ds_test = None
 
@@ -98,8 +86,8 @@ class WaveformDataAdapter(object):
     def events(
         self
     ) -> None:
-        if hasattr(self, '__events'):
-            del self.events
+        if hasattr(self, '_WaveformDataAdapter__events'):
+            del self.__events
             self.__events = None
 
     @property
@@ -123,8 +111,8 @@ class WaveformDataAdapter(object):
     def labels(
         self
     ) -> None:
-        if hasattr(self, '__labels'):
-            del self.labels
+        if hasattr(self, '_WaveformDataAdapter__labels'):
+            del self.__labels
             self.__labels = None
 
     @property
@@ -140,10 +128,6 @@ class WaveformDataAdapter(object):
     ) -> None:
         if op == self.__transforms:
             return
-
-        # FFT and SPECTROGRAM are mutually exclusive
-        if (op & TransformOP.FFT) and (op & TransformOP.SPECTROGRAM):
-            raise ValueError("FFT and SPECTROGRAM transforms are mutually exclusive")
 
         self.__reset()
         self.__transforms = op
@@ -166,30 +150,6 @@ class WaveformDataAdapter(object):
         self.__channels = list(channels)
 
     @property
-    def fft_size(
-        self
-    ) -> int:
-        return self.__fft_size
-
-    @property
-    def fft_output_size(
-        self
-    ) -> int:
-        """Actual FFT output size (unique frequencies only): fft_size // 2 + 1"""
-        return self.__fft_size // 2 + 1
-
-    @fft_size.setter
-    def fft_size(
-        self,
-        size: int
-    ) -> None:
-        if size == self.__fft_size:
-            return
-
-        self.__reset()
-        self.__fft_size = size
-
-    @property
     def test_ratio(
         self
     ) -> float:
@@ -205,62 +165,6 @@ class WaveformDataAdapter(object):
 
         self.__reset()
         self.__test_ratio = ratio
-
-    @property
-    def stft_nperseg(self) -> int:
-        """STFT segment length (window size)."""
-        return self.__stft_nperseg
-
-    @stft_nperseg.setter
-    def stft_nperseg(self, value: int) -> None:
-        if value == self.__stft_nperseg:
-            return
-        self.__reset()
-        self.__stft_nperseg = value
-
-    @property
-    def stft_hop(self) -> int:
-        """STFT hop length (stride between windows)."""
-        return self.__stft_hop
-
-    @stft_hop.setter
-    def stft_hop(self, value: int) -> None:
-        if value == self.__stft_hop:
-            return
-        self.__reset()
-        self.__stft_hop = value
-
-    @property
-    def stft_freq_bins(self) -> int:
-        """Number of frequency bins in STFT output: nperseg // 2 + 1"""
-        return self.__stft_nperseg // 2 + 1
-
-    def __compute_spectrogram(self, data: np.ndarray) -> np.ndarray:
-        """Compute STFT spectrogram for all samples and channels.
-
-        Args:
-            data: Input array [n_samples, seq_len, n_channels]
-
-        Returns:
-            Spectrograms [n_samples, n_channels, freq_bins, time_frames]
-        """
-        n_samples, seq_len, n_channels = data.shape
-        noverlap = self.__stft_nperseg - self.__stft_hop
-
-        # Compute STFT for first sample to get output dimensions
-        _, _, Zxx_sample = stft(data[0, :, 0], nperseg=self.__stft_nperseg, noverlap=noverlap)
-        freq_bins, time_frames = Zxx_sample.shape
-
-        # Allocate output array
-        spectrograms = np.empty((n_samples, n_channels, freq_bins, time_frames), dtype=np.float32)
-
-        # Compute STFT for all samples and channels
-        for i in range(n_samples):
-            for ch in range(n_channels):
-                _, _, Zxx = stft(data[i, :, ch], nperseg=self.__stft_nperseg, noverlap=noverlap)
-                spectrograms[i, ch] = np.abs(Zxx).astype(np.float32)
-
-        return spectrograms
 
     def __process_events(
         self,
@@ -287,19 +191,12 @@ class WaveformDataAdapter(object):
             for ch in range(stacked.shape[2]):
                 stacked[:, :, ch] = stats.zscore(stacked[:, :, ch], axis=1)
 
-        # Batch FFT or STFT/Spectrogram (mutually exclusive)
-        if self.__transforms & TransformOP.FFT:
-            output_size = self.fft_size // 2 + 1
-            start_idx = self.fft_size // 2 - 1
-            fft_full = np.abs(np.fft.fft(stacked, n=self.fft_size, axis=1))
-            stacked = fft_full[:, start_idx:start_idx + output_size, :].astype(np.float32)
-        elif self.__transforms & TransformOP.SPECTROGRAM:
-            stacked = self.__compute_spectrogram(stacked)
-
         return stacked
 
     def __create_datasets(
-        self
+        self,
+        transform_train=None,
+        transform_test=None
     ) -> None:
         encoder_label = LabelEncoder()
         labels = encoder_label.fit_transform(self.labels)
@@ -313,14 +210,33 @@ class WaveformDataAdapter(object):
             test_size=self.test_ratio
         )
 
-        self.__ds_train = WaveformDataset(events=events_train, labels=labels_train)
-        self.__ds_test = WaveformDataset(events=events_test, labels=labels_test)
+        self.__ds_train = WaveformDataset(
+            events=events_train,
+            labels=labels_train,
+            transform=transform_train
+        )
+        self.__ds_test = WaveformDataset(
+            events=events_test,
+            labels=labels_test,
+            transform=transform_test
+        )
 
     def get_datasets(
-        self
-    ) -> tuple[WaveformDataset | None, WaveformDataset | None]:
+        self,
+        transform_train=None,
+        transform_test=None
+    ) -> tuple[WaveformDataset, WaveformDataset]:
+        """Get train/test datasets with optional transforms.
+
+        Args:
+            transform_train: Transform pipeline for training data (with augmentation)
+            transform_test: Transform pipeline for test data (without augmentation)
+
+        Returns:
+            Tuple of (train_dataset, test_dataset)
+        """
         if self.__ds_train is not None and self.__ds_test is not None:
             return self.__ds_train, self.__ds_test
 
-        self.__create_datasets()
+        self.__create_datasets(transform_train, transform_test)
         return self.__ds_train, self.__ds_test
