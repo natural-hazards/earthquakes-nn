@@ -1,6 +1,6 @@
 # Hybrid ViT Training Pipeline
 
-This pipeline trains a Hybrid CNN-ViT model on seismic data. The seismic waveforms are converted to spectrograms (time-frequency representation) using STFT before being fed to the model.
+This pipeline trains a Hybrid CNN-ViT model on seismic data with on-the-fly data augmentation. Time-series augmentations are applied before STFT, and vision augmentations are applied to the resulting spectrograms.
 
 ## Usage
 
@@ -10,12 +10,22 @@ python pipelines/train_hvit.py
 
 ## Data Flow
 
-1. Load seismic events from pickle files
-2. Display class distribution bar chart
-3. Show fan charts for each class (median waveform with quantile bands)
-4. Apply preprocessing: DROP_NAN → TRIMMING → ZSCORE → STFT/Spectrogram
-5. Display sample spectrogram for each channel
-6. Train HybridViT with pretrained ViT backbone
+```
+PREPROCESSING (once)
+┌─────────────────────────────────────────────────────────────────┐
+│   Load Events → DROP_NAN → TRIMMING → ZSCORE → [time series]   │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+TRAINING (on-the-fly)
+┌─────────────────────────────────────────────────────────────────┐
+│   Time series → TIME AUG → STFT → VISION AUG → Model           │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+TESTING (on-the-fly, no augmentation)
+┌─────────────────────────────────────────────────────────────────┐
+│   Time series → STFT → Model                                   │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ## Configuration
 
@@ -36,18 +46,66 @@ adapter = WaveformDataAdapter(
     events=events,
     labels=labels,
     channels=channels,
-    stft_nperseg=64,
-    stft_hop=32,
-    transforms=TransformOP.DROP_NAN | TransformOP.TRIMMING | TransformOP.ZSCORE | TransformOP.SPECTROGRAM,
+    transforms=TransformOP.DROP_NAN | TransformOP.TRIMMING | TransformOP.ZSCORE,
     test_ratio=0.3
 )
 ```
 
 | Parameter | Description |
 |-----------|-------------|
-| `stft_nperseg` | STFT window size (default: 64) |
-| `stft_hop` | STFT hop length/stride (default: 32) |
 | `test_ratio` | Fraction of data for testing (default: 0.3) |
+
+### Transform Pipelines
+
+**Training Transform** (with augmentation):
+
+```python
+train_transform = nn.Sequential(
+    # Time-series augmentations
+    Compose([
+        RandomApply(TimeShift(max_shift=0.1), p=0.5),
+        RandomApply(AddNoise(snr_min=15, snr_max=40), p=0.5),
+        RandomApply(AmplitudeScale(0.9, 1.1), p=0.3),
+    ]),
+    STFTTransform(nperseg=64, hop=32),
+    ToTensor(),
+    # Vision augmentation (SpecAugment-style)
+    T.RandomErasing(p=0.3, scale=(0.02, 0.1), ratio=(0.3, 3.3)),
+)
+```
+
+**Test Transform** (no augmentation):
+
+```python
+test_transform = nn.Sequential(
+    STFTTransform(nperseg=64, hop=32),
+    ToTensor(),
+)
+```
+
+### Time-Series Augmentation Parameters
+
+| Augmentation | Parameter | Value | Description |
+|--------------|-----------|-------|-------------|
+| `TimeShift` | max_shift | 0.1 | Circular shift up to 10% of sequence |
+| `AddNoise` | snr_min/max | 15-40 dB | Gaussian noise with random SNR |
+| `AmplitudeScale` | scale | 0.9-1.1 | Random amplitude scaling |
+
+### Vision Augmentation Parameters
+
+| Transform | Parameter | Value | Description |
+|-----------|-----------|-------|-------------|
+| `T.RandomErasing` | p | 0.3 | Probability of applying |
+| `T.RandomErasing` | scale | (0.02, 0.1) | Area ratio of erased region |
+| `T.RandomErasing` | ratio | (0.3, 3.3) | Aspect ratio of erased region |
+
+### STFT Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `nperseg` | 64 | STFT window size |
+| `hop` | 32 | STFT hop length (50% overlap) |
+| `freq_bins` | 33 | Output frequency bins (`nperseg // 2 + 1`) |
 
 ### Model Parameters
 
@@ -87,6 +145,7 @@ The pipeline displays:
 - Number of loaded events per file
 - Total event count and class distribution
 - Fan charts showing waveform variability per class
+- Spectrogram shape information (channels, freq_bins, time_frames)
 - Spectrogram visualization for sample event
 - Model architecture summary (via torchinfo)
 - Training progress with loss and metrics
