@@ -37,7 +37,9 @@ def train_model(
     batch_size_test: int = 32,
     epochs: int = 20,
     lr: float = 0.001,
-    device: str = 'cuda'
+    device: str = 'cuda',
+    use_amp: bool = True,
+    compile_model: bool = True
 ) -> None:
     loader_train = DataLoader(
         dataset=events_train,
@@ -53,6 +55,9 @@ def train_model(
         num_workers=4
     )
 
+    if compile_model:
+        model = tch.compile(model)
+
     optimizer = tch.optim.AdamW(model.parameters(), lr=lr)
     lr_scheduler = tch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=.85)
     lr_handler = LRScheduler(lr_scheduler)
@@ -61,7 +66,8 @@ def train_model(
         model=model,
         optimizer=optimizer,
         loss_fn=nn.CrossEntropyLoss(),
-        device=device
+        device=device,
+        amp_mode="amp" if use_amp and device == 'cuda' else None
     )
 
     evaluator = create_supervised_evaluator(
