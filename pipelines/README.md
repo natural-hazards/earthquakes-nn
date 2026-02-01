@@ -8,6 +8,7 @@ Training pipelines for seismic event classification models.
 |----------|-------|-----------------|---------------|
 | `train_lstm.py` | LSTMModel, LSTMAttentionModel | FFT | [TRAIN_LSTM.md](TRAIN_LSTM.md) |
 | `train_hvit.py` | HybridViT | STFT/Spectrogram | [TRAIN_HVIT.md](TRAIN_HVIT.md) |
+| `train_efficientnet.py` | EfficientNet | STFT/Spectrogram | [TRAIN_EFFICIENTNET.md](TRAIN_EFFICIENTNET.md) |
 
 ## Quick Start
 
@@ -17,6 +18,9 @@ python pipelines/train_lstm.py
 
 # Train Hybrid ViT model
 python pipelines/train_hvit.py
+
+# Train EfficientNet model
+python pipelines/train_efficientnet.py
 ```
 
 ## Shared Utilities

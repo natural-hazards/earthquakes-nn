@@ -4,7 +4,7 @@ A deep learning framework for classifying seismic events using LSTM and Vision T
 
 ## Features
 
-- **Multiple model architectures**: LSTM, LSTM with attention, and Hybrid CNN-ViT
+- **Multiple model architectures**: LSTM, LSTM with attention, Hybrid CNN-ViT, and EfficientNet
 - **Flexible preprocessing**: FFT and STFT/Spectrogram transforms
 - **Visualization tools**: Fan charts and spectrogram plotting
 - **Data augmentation**: Time shift, noise injection, amplitude scaling, and more
@@ -27,6 +27,7 @@ earthquakes-nn/
 ├── pipelines/              # Training pipelines
 │   ├── train_lstm.py       # LSTM model training
 │   ├── train_hvit.py       # Hybrid ViT training
+│   ├── train_efficientnet.py # EfficientNet training
 │   └── utils.py            # Shared utilities
 ├── quake/
 │   ├── data/
@@ -38,8 +39,10 @@ earthquakes-nn/
 │   │   ├── lstm.py         # Standard LSTM model
 │   │   ├── lstm_mhsa.py    # LSTM with multi-head attention
 │   │   ├── hybrid_vit.py   # Hybrid CNN-ViT model
+│   │   ├── efficientnet.py # EfficientNet model
 │   │   ├── LSTM.md         # LSTM documentation
-│   │   └── HYBRID_VIT.md   # Hybrid ViT documentation
+│   │   ├── HYBRID_VIT.md   # Hybrid ViT documentation
+│   │   └── EFFICIENTNET.md # EfficientNet documentation
 │   ├── procs/
 │   │   └── train.py        # Training loop
 │   └── visualization/
@@ -138,6 +141,25 @@ model = HybridViT(
 )
 ```
 
+### EfficientNet
+
+Pretrained EfficientNet from torchvision for spectrogram classification.
+
+See [quake/models/EFFICIENTNET.md](quake/models/EFFICIENTNET.md) for detailed architecture documentation.
+
+```python
+from quake.models import EfficientNetBackbone, EfficientNet
+
+model = EfficientNet(
+    backbone=EfficientNetBackbone.B0,  # Pretrained backbone (B0-B4, V2_S, V2_M)
+    in_channels=3,                      # Z, N, E channels
+    num_classes=2,
+    dropout=0.2
+)
+```
+
+Available backbones: `B0` (5.3M), `B1` (7.8M), `B2` (9.2M), `B3` (12M), `B4` (19M), `V2_S` (21M), `V2_M` (54M)
+
 ## Visualizations
 
 ### Fan Charts
@@ -198,6 +220,19 @@ The pipeline:
 3. Converts waveforms to spectrograms using STFT
 4. Trains HybridViT with pretrained ViT backbone
 
+### EfficientNet Training
+
+Trains EfficientNet on spectrogram data.
+
+```bash
+python pipelines/train_efficientnet.py
+```
+
+The pipeline:
+1. Loads seismic events from pickle files
+2. Converts waveforms to spectrograms using STFT
+3. Trains EfficientNet with pretrained ImageNet weights
+
 ## References
 
 ### LSTM
@@ -209,6 +244,11 @@ The pipeline:
 
 1. Xiao, T., et al. (2021). *Early Convolutions Help Transformers See Better*. NeurIPS.
 2. Dosovitskiy, A., et al. (2020). *An Image is Worth 16x16 Words*. ICLR.
+
+### EfficientNet
+
+1. Tan, M., & Le, Q. (2019). *EfficientNet: Rethinking Model Scaling for CNNs*. ICML.
+2. Tan, M., & Le, Q. (2021). *EfficientNetV2: Smaller Models and Faster Training*. ICML.
 
 ## License
 
