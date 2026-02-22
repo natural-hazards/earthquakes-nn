@@ -43,5 +43,9 @@ class WaveformDataset:
 
         return event, label
 
+    @property
+    def labels(self) -> np.ndarray:
+        return self.__labels
+
     def __len__(self) -> int:
         return len(self.__events)
