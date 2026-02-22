@@ -29,9 +29,10 @@ from quake.data.augmentation import (
 from quake.data.transforms import FFTTransform, ToTensor
 from quake.models.lstm import LSTMModel
 from quake.models.lstm_mhsa import LSTMAttentionModel
-from quake.procs.train import train_model
+from quake.models.lstm_svm import LSTMAttentionSVMModel
+from quake.procs.train import train_model, train_svm_model
 
-from pipelines.utils import load_events, show_fan_charts
+from pipelines.utils import load_events, filter_by_labels, show_fan_charts
 
 
 def train_lstm(
@@ -72,8 +73,8 @@ def train_lstm_attention(
         channels=channels,
         classes=2,
         hidden=64,
-        layers=2,
-        heads=2,
+        layers=8,
+        heads=4,
         dropout=0.3
     ).to(device)
 
@@ -82,21 +83,54 @@ def train_lstm_attention(
     train_model(
         events_train=events_train,
         events_test=events_test,
+        epochs=30,
         model=model
+    )
+
+
+def train_lstm_svm(
+    events_train,
+    events_test,
+    seq_len: int,
+    channels: int = 3,
+    device: str = 'cuda'
+) -> None:
+    """Train LSTM + Attention model with SVM classifier."""
+    model = LSTMAttentionSVMModel(
+        channels=channels,
+        hidden=128,
+        layers=8,
+        heads=4,
+        dropout=0.3,
+        svm_alpha=1e-6,
+        svm_eta0=1e-3
+    ).to(device)
+
+    summary(model, input_size=(1, seq_len, channels))
+
+    train_svm_model(
+        events_train=events_train,
+        events_test=events_test,
+        model=model,
+        epochs=30,
+        compile_model=False
     )
 
 
 def main() -> None:
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    # channels = ('Z', 'N', 'E')
     channels = ('Z', 'N', 'E')
 
     # Load data from multiple sources
     paths = [
-        './resources/VRAC.pkl',
-        './resources/MORC.pkl',
-        './resources/hh_all.pkl',
+        # './resources/VRAC.pkl',
+        # './resources/MORC.pkl',
+        # './resources/hh_all.pkl',
+        './resources/SPF.pkl'
     ]
     events, labels = load_events(paths)
+    # events, labels = filter_by_labels(events, labels, keep=('T', 'M'))
 
     unique, counts = np.unique(labels, return_counts=True)
     print(f'Number of events: {len(events)}')
@@ -109,7 +143,7 @@ def main() -> None:
     plt.show()
 
     # Fan charts show median waveform with quantile bands for each class
-    show_fan_charts(events, labels, channels)
+    # show_fan_charts(events, labels, channels)
 
     # Preprocessing: z-score only (FFT done dynamically)
     adapter = WaveformDataAdapter(
@@ -151,8 +185,9 @@ def main() -> None:
     seq_len = sample.shape[0]
     print(f"Input shape: seq_len={seq_len}, channels={len(channels)}")
 
-    train_lstm(events_train, events_test, seq_len=seq_len, channels=len(channels), device=device)
+    # train_lstm(events_train, events_test, seq_len=seq_len, channels=len(channels), device=device)
     # train_lstm_attention(events_train, events_test, seq_len=seq_len, channels=len(channels), device=device)
+    train_lstm_svm(events_train, events_test, seq_len=seq_len, channels=len(channels), device=device)
 
 
 if __name__ == "__main__":
