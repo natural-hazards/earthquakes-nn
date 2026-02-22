@@ -30,6 +30,25 @@ def load_events(paths: list[str]) -> tuple[list, np.ndarray]:
     return events, np.array(labels)
 
 
+def filter_by_labels(
+    events: list,
+    labels: np.ndarray,
+    keep: tuple[str, ...] = ('M', 'T')
+) -> tuple[list, np.ndarray]:
+    """Keep only events with labels in `keep`.
+
+    Args:
+        events: List of event DataFrames
+        labels: Array of class labels
+        keep: Label values to keep
+
+    Returns:
+        Filtered (events, labels)
+    """
+    mask = np.isin(labels, keep)
+    return [e for e, m in zip(events, mask) if m], labels[mask]
+
+
 def show_fan_charts(
     events: list,
     labels: np.ndarray,
