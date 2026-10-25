@@ -43,6 +43,14 @@ class WaveformDataset:
 
         return event, label
 
+    def subset(self, indices: np.ndarray) -> 'WaveformDataset':
+        """Return a new dataset with the selected samples and the same transform."""
+        return WaveformDataset(
+            events=self.__events[indices],
+            labels=self.__labels[indices],
+            transform=self.__transform
+        )
+
     @property
     def labels(self) -> np.ndarray:
         return self.__labels

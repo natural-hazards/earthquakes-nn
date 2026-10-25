@@ -22,6 +22,7 @@ class TransformOP(IntFlag):
     TRIMMING = 1 << 3
     ZSCORE = 1 << 4
     PCA = 1 << 5
+    PADDING = 1 << 6
 
 
 class WaveformDataAdapter(object):
@@ -33,7 +34,30 @@ class WaveformDataAdapter(object):
         channels: list[str] | tuple[str, ...] | None = ('Z', 'N', 'E'),
         transforms: TransformOP = TransformOP.NONE,
         test_ratio: float = 0.3,
+        seq_len: int | None = None,
+        random_state: int | None = None
     ) -> None:
+        """
+        Args:
+            events: Event DataFrames with one column per channel
+            labels: Class label per event
+            channels: Channels to use
+            transforms: Preprocessing flags. PADDING crops events longer than
+                `seq_len` and zero-pads shorter ones (at the end); TRIMMING
+                crops all events to the shortest one. They are exclusive.
+            test_ratio: Fraction of events used for the (stratified) test split
+            seq_len: Fixed event length in samples, required by PADDING
+            random_state: Seed for the train/test split
+        """
+        if transforms & TransformOP.PADDING:
+            if transforms & TransformOP.TRIMMING:
+                raise ValueError('PADDING and TRIMMING cannot be combined!')
+            if seq_len is None:
+                raise ValueError('PADDING requires seq_len!')
+
+        self.__seq_len = seq_len
+        self.__random_state = random_state
+
         self.__channels: list[str] | tuple[str, ...] | None = None
         self.channels = channels
 
@@ -179,19 +203,25 @@ class WaveformDataAdapter(object):
                 event = event.dropna()
             arrays.append(event[channels].to_numpy(dtype=np.float32))
 
-        # Trim to min length and stack
+        # Crop to a common length
         if self.__transforms & TransformOP.TRIMMING:
             min_len = min(len(arr) for arr in arrays)
             arrays = [arr[:min_len] for arr in arrays]
+        elif self.__transforms & TransformOP.PADDING:
+            arrays = [arr[:self.__seq_len] for arr in arrays]
 
-        stacked = np.stack(arrays)  # [n_samples, seq_len, n_channels]
-
-        # Batch ZSCORE
+        # ZSCORE per event and channel, computed before padding so that
+        # the padded samples stay zero and do not bias the statistics
         if self.__transforms & TransformOP.ZSCORE:
-            for ch in range(stacked.shape[2]):
-                stacked[:, :, ch] = stats.zscore(stacked[:, :, ch], axis=1)
+            arrays = [stats.zscore(arr, axis=0) for arr in arrays]
 
-        return stacked
+        if self.__transforms & TransformOP.PADDING:
+            stacked = np.zeros((len(arrays), self.__seq_len, arrays[0].shape[1]), dtype=np.float32)
+            for i, arr in enumerate(arrays):
+                stacked[i, :len(arr)] = arr
+            return stacked
+
+        return np.stack(arrays)  # [n_samples, seq_len, n_channels]
 
     def __create_datasets(
         self,
@@ -207,7 +237,9 @@ class WaveformDataAdapter(object):
         events_train, events_test, labels_train, labels_test = model_selection.train_test_split(
             events,
             labels,
-            test_size=self.test_ratio
+            test_size=self.test_ratio,
+            stratify=labels,
+            random_state=self.__random_state
         )
 
         self.__ds_train = WaveformDataset(

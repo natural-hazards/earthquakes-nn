@@ -28,17 +28,24 @@ class FFTTransform(nn.Module):
 
     Input: [seq_len, channels]
     Output: [fft_output_size, channels]
+
+    Args:
+        fft_size: FFT length (the signal is cropped or zero-padded to it)
+        log: Return log(1 + |X|) to compress the dynamic range
     """
 
-    def __init__(self, fft_size: int = 512):
+    def __init__(self, fft_size: int = 512, log: bool = False):
         super().__init__()
         self.fft_size = fft_size
         self.output_size = fft_size // 2 + 1
+        self.log = log
 
     def forward(self, x: np.ndarray) -> np.ndarray:
         # x: [seq_len, channels]
         start_idx = self.fft_size // 2 - 1
         fft_full = np.abs(np.fft.fft(x, n=self.fft_size, axis=0))
+        if self.log:
+            fft_full = np.log1p(fft_full)
         return fft_full[start_idx:start_idx + self.output_size, :].astype(np.float32)
 
 
@@ -53,9 +60,11 @@ class STFTTransform(nn.Module):
         self,
         nperseg: int = 64,
         hop: int = 32,
-        window: str = 'hann'
+        window: str = 'hann',
+        log: bool = False
     ):
         super().__init__()
+        self.log = log
         self.nperseg = nperseg
         self.hop = hop
         self.noverlap = nperseg - hop
@@ -88,4 +97,6 @@ class STFTTransform(nn.Module):
             )
             result[ch] = np.abs(Zxx)
 
+        if self.log:
+            np.log1p(result, out=result)
         return result
