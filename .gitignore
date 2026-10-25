@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Datasets (multi-GB pickles, see resources/download.bash)
+resources/*.pkl
+
+# Generated LaTeX preview
+docs/methods_and_results_preview.pdf
