@@ -15,6 +15,7 @@ Usage:
     python pipelines/train_efficientnet.py
 """
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torchvision import transforms as T
@@ -35,13 +36,14 @@ def train_efficientnet(
     events_train,
     events_test,
     channels: int = 3,
+    classes: int = 2,
     device: str = 'cuda'
 ) -> None:
     """Train EfficientNet model on spectrogram data."""
     model = EfficientNet(
         backbone=EfficientNetBackbone.B0,
         in_channels=channels,
-        num_classes=2,
+        num_classes=classes,
         dropout=0.2
     ).to(device)
 
@@ -68,6 +70,7 @@ def main() -> None:
         './resources/hh_all.pkl',
     ]
     events, labels = load_events(paths)
+    classes = len(np.unique(labels))
     print(f'Total events: {len(events)}')
 
     # Preprocessing
@@ -115,6 +118,7 @@ def main() -> None:
         events_train,
         events_test,
         channels=len(channels),
+        classes=classes,
         device=device
     )
 

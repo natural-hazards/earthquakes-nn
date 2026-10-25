@@ -39,6 +39,7 @@ def train_hybrid_vit(
     events_test,
     img_size: tuple[int, int],
     channels: int = 3,
+    classes: int = 2,
     device: str = 'cuda'
 ) -> None:
     """Train HybridViT model on spectrogram data."""
@@ -46,7 +47,7 @@ def train_hybrid_vit(
         backbone=Backbone.TINY,
         depth=4,
         in_channels=channels,
-        num_classes=2,
+        num_classes=classes,
         img_size=img_size,
         dropout=0.2
     ).to(device)
@@ -77,6 +78,7 @@ def main() -> None:
     print(f'Total events: {len(events)}')
 
     unique, counts = np.unique(labels, return_counts=True)
+    classes = len(unique)
     plt.bar(unique, counts)
     plt.title('Event Distribution')
     plt.xlabel('Event Type')
@@ -134,6 +136,7 @@ def main() -> None:
         events_test,
         img_size=(freq_bins, time_frames),
         channels=len(channels),
+        classes=classes,
         device=device
     )
 
