@@ -21,7 +21,7 @@ Architecture:
         |
     SVMClassifier (sklearn SGDClassifier backend)
         |
-    Output: [B] (decision values)
+    Output: [B] (binary decision values) or [B, classes] (one-vs-rest)
 """
 
 import torch as tch
@@ -41,6 +41,7 @@ class LSTMAttentionSVMModel(nn.Module):
 
     Args:
         channels: Number of input channels (e.g., 3 for Z, N, E components)
+        classes: Number of output classes
         hidden: LSTM hidden dimension (must be divisible by heads)
         layers: Number of stacked LSTM layers
         heads: Number of attention heads
@@ -52,6 +53,7 @@ class LSTMAttentionSVMModel(nn.Module):
     def __init__(
         self,
         channels: int = 3,
+        classes: int = 2,
         hidden: int = 256,
         layers: int = 3,
         heads: int = 4,
@@ -81,6 +83,7 @@ class LSTMAttentionSVMModel(nn.Module):
 
         self.classifier = SVMClassifier(
             in_features=hidden,
+            classes=classes,
             alpha=svm_alpha,
             eta0=svm_eta0
         )
@@ -113,7 +116,7 @@ class LSTMAttentionSVMModel(nn.Module):
             x: Input tensor [batch, seq_len, channels]
 
         Returns:
-            SVM decision values [batch]
+            SVM decision values [batch] (binary) or [batch, classes]
         """
         features = self.extract_features(x)
         return self.classifier(features)

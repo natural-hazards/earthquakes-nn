@@ -21,12 +21,12 @@ class SVMFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, w, b):
         ctx.save_for_backward(w,)
-        return x @ w + b
+        return x @ w.T + b
 
     @staticmethod
     def backward(ctx, grad_output):
         w, = ctx.saved_tensors
-        grad_x = grad_output.unsqueeze(1) * w.unsqueeze(0)
+        grad_x = grad_output @ w
         return grad_x, None, None
 
 
@@ -38,8 +38,13 @@ class SVMClassifier(nn.Module):
     upstream layers (LSTM) while keeping SVM weights outside PyTorch's
     optimizer.
 
+    For binary classification (classes=2) the output is a single decision
+    value per sample [B]. For multiclass (classes>2) a one-vs-rest scheme
+    is used, matching sklearn, and the output is [B, classes].
+
     Args:
         in_features: Dimension of input feature vector
+        classes: Number of output classes
         alpha: L2 regularization strength (equivalent to 1/C)
         eta0: Learning rate for SGDClassifier
     """
@@ -47,14 +52,18 @@ class SVMClassifier(nn.Module):
     def __init__(
         self,
         in_features: int,
+        classes: int = 2,
         alpha: float = 1e-4,
         eta0: float = 0.01
     ) -> None:
         super().__init__()
         self.in_features = in_features
+        self.classes = classes
 
-        self.register_buffer('w', torch.zeros(in_features))
-        self.register_buffer('b', torch.zeros(1))
+        # sklearn stores one weight vector for binary, one per class for OvR
+        n_out = 1 if classes == 2 else classes
+        self.register_buffer('w', torch.zeros(n_out, in_features))
+        self.register_buffer('b', torch.zeros(n_out))
 
         self.sgd_clf = SGDClassifier(
             loss='hinge',
@@ -66,18 +75,27 @@ class SVMClassifier(nn.Module):
         self._fitted = False
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return SVMFunction.apply(x, self.w, self.b)
+        out = SVMFunction.apply(x, self.w, self.b)
+        return out.squeeze(-1) if self.classes == 2 else out
 
-    def fit_step(self, x: torch.Tensor, y: torch.Tensor) -> None:
+    def fit_step(
+        self,
+        x: torch.Tensor,
+        y: torch.Tensor,
+        sample_weight: torch.Tensor | None = None
+    ) -> None:
         """Update SVM weights via sklearn and sync to PyTorch buffers.
 
-        Call this after backward() each training step.
+        Call this after backward() each training step. `sample_weight`
+        should match the weights used in the feature extractor's loss,
+        otherwise the SVM and the extractor optimize different objectives.
         """
-        x_np = x.detach().cpu().numpy()
+        x_np = x.detach().float().cpu().numpy()
         y_np = y.detach().cpu().numpy()
+        sw_np = None if sample_weight is None else sample_weight.detach().float().cpu().numpy()
 
-        self.sgd_clf.partial_fit(x_np, y_np, classes=np.array([0, 1]))
+        self.sgd_clf.partial_fit(x_np, y_np, classes=np.arange(self.classes), sample_weight=sw_np)
         self._fitted = True
 
-        self.w.copy_(torch.from_numpy(self.sgd_clf.coef_[0]).to(self.w.device))
+        self.w.copy_(torch.from_numpy(self.sgd_clf.coef_).to(self.w.device))
         self.b.copy_(torch.from_numpy(self.sgd_clf.intercept_).to(self.b.device))
