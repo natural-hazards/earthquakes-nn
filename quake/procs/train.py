@@ -88,7 +88,8 @@ def train_model(
         dataset=events_train,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=4
+        num_workers=4,
+        drop_last=True  # a trailing batch of size 1 breaks BatchNorm in training mode
     )
 
     loader_test = DataLoader(
@@ -191,7 +192,8 @@ def train_svm_model(
         dataset=events_train,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=4
+        num_workers=4,
+        drop_last=True  # a trailing batch of size 1 breaks BatchNorm in training mode
     )
 
     loader_test = DataLoader(
