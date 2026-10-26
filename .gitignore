@@ -8,3 +8,12 @@ resources/*.pkl
 
 # Generated LaTeX preview
 docs/methods_and_results_preview.pdf
+
+# Experiment artefacts (regenerable; results/*.json are kept)
+experiments/*/cache/
+experiments/*/logs/
+experiments/*/models/
+experiments/*/diag/*.log
+experiments/*/*.log
+experiments/lstm/log_*.txt
+experiments/**/FINISHED*

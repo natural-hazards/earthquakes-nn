@@ -1,0 +1,41 @@
+{
+ "name": "effnet_T_M_L30_wnone_log1_g0.85_e30_s0",
+ "args": {
+  "model": "effnet",
+  "task": "T_M",
+  "duration": 30,
+  "weighting": "none",
+  "log": 1,
+  "seed": 0,
+  "epochs": 30,
+  "gamma": 0.85,
+  "layers": 3,
+  "hidden": 128,
+  "dropout": 0.3,
+  "lr": 0.001,
+  "clip": 0,
+  "final": true,
+  "undersample": 0,
+  "limit": 0
+ },
+ "time": 516.5533108711243,
+ "test": {
+  "macro_f1": 0.9715540744629354,
+  "f1": [
+   0.9458483754512635,
+   0.9972597734746073
+  ],
+  "cm": [
+   [
+    524,
+    35
+   ],
+   [
+    25,
+    10918
+   ]
+  ],
+  "balanced_acc": 0.9675518138632502,
+  "roc_auc": 0.9928466535897429
+ }
+}

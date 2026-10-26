@@ -1,0 +1,41 @@
+{
+ "name": "lstm_T_M_L10_wnone_log0_g0.85_e30_s1",
+ "args": {
+  "model": "lstm",
+  "task": "T_M",
+  "duration": 10,
+  "weighting": "none",
+  "log": 0,
+  "seed": 1,
+  "epochs": 30,
+  "gamma": 0.85,
+  "layers": 3,
+  "hidden": 128,
+  "dropout": 0.3,
+  "lr": 0.001,
+  "clip": 0,
+  "final": true,
+  "undersample": 0,
+  "limit": 0
+ },
+ "time": 813.6675572395325,
+ "test": {
+  "macro_f1": 0.9311431482583443,
+  "f1": [
+   0.8686679174484052,
+   0.9936183790682833
+  ],
+  "cm": [
+   [
+    463,
+    96
+   ],
+   [
+    44,
+    10899
+   ]
+  ],
+  "balanced_acc": 0.9121219616300893,
+  "roc_auc": 0.9784235664494682
+ }
+}
