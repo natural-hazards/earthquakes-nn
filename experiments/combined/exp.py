@@ -37,6 +37,8 @@ p.add_argument('--epochs', type=int, default=30)
 p.add_argument('--lr', type=float, default=None, help='default 1e-3 (1e-4 for lstm_attn)')
 p.add_argument('--gamma', type=float, default=None, help='default 0.85 (0.9 for lstm_attn)')
 p.add_argument('--final', action='store_true')
+p.add_argument('--tag', default='', help='dataset variant: uses cache_<tag>/, results_<tag>/ ...')
+p.add_argument('--init', default='', help='state dict to start from (fine-tuning); included in the run name')
 p.add_argument('--limit', type=int, default=0, help='debug: use only N training events')
 a = p.parse_args()
 
@@ -44,13 +46,17 @@ spectro = a.model in ('effnet', 'hvit')
 log = int(spectro) if a.log is None else a.log
 lr = a.lr or (1e-4 if a.model == 'lstm_attn' else 1e-3)
 gamma = a.gamma or (0.9 if a.model == 'lstm_attn' else 0.85)
-name = f'{a.model}_{a.task}_{a.data}_D{a.duration}_log{log}_lr{lr:g}_g{gamma}_e{a.epochs}_s{a.seed}'
+name = f'{a.model}_{a.task}_{a.data}_D{a.duration}_log{log}_lr{lr:g}_g{gamma}_e{a.epochs}'
+if a.init:
+    name += '_ft'  # fine-tuned from a model pretrained on the other source
+name += f'_s{a.seed}'
+sfx = f'_{a.tag}' if a.tag else ''
 print('RUN', name, 'FINAL' if a.final else 'SELECTION', flush=True)
 torch.manual_seed(a.seed); np.random.seed(a.seed)
 device = 'cuda'
 SOURCES = {0: 'orig', 1: 'okc'}
 
-d = np.load(f'cache/D{a.duration}s.npz')
+d = np.load(f'cache{sfx}/D{a.duration}s.npz')
 all_classes = [str(c) for c in d['classes']]  # ['E', 'M', 'T']
 keep = all_classes if a.task == 'EMT' else a.task.split('_')
 keep_idx = [all_classes.index(c) for c in keep]
@@ -108,6 +114,9 @@ elif a.model == 'effnet':
     model = EfficientNet(backbone=EfficientNetBackbone.B0, in_channels=3, num_classes=K, dropout=0.2)
 else:
     model = HybridViT(backbone=Backbone.TINY, depth=4, in_channels=3, num_classes=K, img_size=shape[1:], dropout=0.2)
+if a.init:
+    model.load_state_dict(torch.load(a.init, map_location='cpu'))
+    print('initialised from', a.init, flush=True)
 model = model.to(device)
 
 t = time.time()
@@ -159,10 +168,10 @@ for split in ('val', 'test'):
 print(f'time {elapsed:.0f}s')
 
 if not a.limit:
-    out_dir = 'results_final' if a.final else 'results'
+    out_dir = ('results_final' if a.final else 'results') + sfx
     os.makedirs(out_dir, exist_ok=True)
     json.dump(res, open(f'{out_dir}/{name}.json', 'w'), indent=1)
     if a.final:
-        os.makedirs('models', exist_ok=True)
-        torch.save(model.state_dict(), f'models/{name}.pt')
+        os.makedirs('models' + sfx, exist_ok=True)
+        torch.save(model.state_dict(), f'models{sfx}/{name}.pt')
 print('DONE', name, flush=True)
