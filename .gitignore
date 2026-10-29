@@ -21,3 +21,12 @@ experiments/**/FINISHED*
 # macOS metadata
 .DS_Store
 ._*
+
+# Manuscript build artefacts
+Clanek___IJRMMS/manuscript_preview.pdf
+Clanek___IJRMMS/*.aux
+Clanek___IJRMMS/*.bbl
+Clanek___IJRMMS/*.blg
+Clanek___IJRMMS/*.log
+Clanek___IJRMMS/*.out
+Clanek___IJRMMS/*.spl
