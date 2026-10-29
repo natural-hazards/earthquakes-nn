@@ -17,3 +17,7 @@ experiments/*/diag/*.log
 experiments/*/*.log
 experiments/lstm/log_*.txt
 experiments/**/FINISHED*
+
+# macOS metadata
+.DS_Store
+._*
