@@ -40,7 +40,10 @@ def cm_stats(cm):
 
 sel = load('results/*.json')
 fin = load('results_final/*.json')
+fin = {cfg: rs for cfg, rs in fin.items() if rs[0]['args'].get('task', 'EMT') == 'EMT'}
 final_by_model = {rs[0]['args']['model']: (cfg, rs) for cfg, rs in fin.items()}
+# training/inference times measured one run at a time on an idle machine (run_timing.sh)
+timing = {cfg: rs for cfg, rs in load('results_final_timing/*.json').items()}
 
 
 def n_params(name):
@@ -206,20 +209,24 @@ w('')
 # ---------------------------------------------------------------- Table: cost
 w(r'\begin{table}[tb]')
 w(r'  \centering')
-w(r'  \caption{Computational cost of the final models: number of trainable parameters and '
-  r'wall-clock training time for 30 epochs on a single GPU (mean over three runs; three runs '
-  r'were trained concurrently on the same GPU).}')
+w(r'  \caption{Computational cost of the final models: number of trainable parameters, '
+  r'wall-clock training time for 30 epochs, and inference throughput on the test split '
+  r'(11,952 events, including the on-the-fly spectral transform and data loading). Times are '
+  r'means over three runs, each executed alone on one GPU (NVIDIA RTX 5090) with four '
+  r'data-loading workers.}')
 w(r'  \label{tab:cost}')
-w(r'  \begin{tabular}{lrr}')
+w(r'  \begin{tabular}{lrrr}')
 w(r'    \toprule')
-w(r'    Model & Parameters & Training time [min] \\')
+w(r'    Model & Parameters & Training [min] & Inference [events/s] \\')
 w(r'    \midrule')
 for m in ORDER:
     if m not in final_by_model:
         continue
     cfg, rs = final_by_model[m]
-    t = np.mean([r['time'] for r in rs]) / 60
-    w(f'    {LABEL[m]} & {n_params(cfg):,.0f} & {t:.1f} \\\\')
+    rt = timing.get(cfg, rs)  # fall back to the original (concurrent) runs if no timing run exists
+    t = np.mean([r['time'] for r in rt]) / 60
+    thr = np.mean([r['n_test'] / r['infer_time'] for r in rt]) if 'infer_time' in rt[0] else float('nan')
+    w(f'    {LABEL[m]} & {n_params(cfg):,.0f} & {t:.1f} & {thr:,.0f} \\\\')
 w(r'    \bottomrule')
 w(r'  \end{tabular}')
 w(r'\end{table}')

@@ -1,0 +1,51 @@
+{
+ "name": "hvit_L30_wnone_log1_g0.85_e30_s0",
+ "args": {
+  "model": "hvit",
+  "task": "EMT",
+  "duration": 30,
+  "weighting": "none",
+  "log": 1,
+  "seed": 0,
+  "epochs": 30,
+  "gamma": 0.85,
+  "layers": 3,
+  "hidden": 128,
+  "dropout": 0.3,
+  "lr": 0.001,
+  "clip": 0,
+  "final": true,
+  "tag": "timing",
+  "undersample": 0,
+  "limit": 0
+ },
+ "time": 88.4411997795105,
+ "infer_time": 0.7049517631530762,
+ "n_test": 11952,
+ "test": {
+  "macro_f1": 0.9464622897621542,
+  "f1": [
+   0.9187986651835373,
+   0.9943889421103052,
+   0.9261992619926199
+  ],
+  "cm": [
+   [
+    413,
+    35,
+    2
+   ],
+   [
+    23,
+    10899,
+    21
+   ],
+   [
+    13,
+    44,
+    502
+   ]
+  ],
+  "balanced_acc": 0.9372630476328072
+ }
+}

@@ -1,0 +1,51 @@
+{
+ "name": "lstm_attn_L10_wnone_log0_g0.9_e30_l3_h128_d0.3_lr0.0001_c0_s1",
+ "args": {
+  "model": "lstm_attn",
+  "task": "EMT",
+  "duration": 10,
+  "weighting": "none",
+  "log": 0,
+  "seed": 1,
+  "epochs": 30,
+  "gamma": 0.9,
+  "layers": 3,
+  "hidden": 128,
+  "dropout": 0.3,
+  "lr": 0.0001,
+  "clip": 0,
+  "final": true,
+  "tag": "timing",
+  "undersample": 0,
+  "limit": 0
+ },
+ "time": 301.8650209903717,
+ "infer_time": 0.709754228591919,
+ "n_test": 11952,
+ "test": {
+  "macro_f1": 0.8262151913988275,
+  "f1": [
+   0.688,
+   0.9835548546970039,
+   0.8070907194994786
+  ],
+  "cm": [
+   [
+    258,
+    188,
+    4
+   ],
+   [
+    19,
+    10915,
+    9
+   ],
+   [
+    23,
+    149,
+    387
+   ]
+  ],
+  "balanced_acc": 0.7543607707694339
+ }
+}

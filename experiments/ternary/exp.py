@@ -42,6 +42,7 @@ p.add_argument('--dropout', type=float, default=0.3, help='dropout (lstm_attn, l
 p.add_argument('--lr', type=float, default=1e-3)
 p.add_argument('--clip', type=float, default=0, help='max gradient norm, 0 = no clipping')
 p.add_argument('--final', action='store_true', help='train on train+val, evaluate on test')
+p.add_argument('--tag', default='', help='suffix for the results/models directories (e.g. timing)')
 p.add_argument('--undersample', type=int, default=0, help='keep at most N training events of class M (index 1)')
 p.add_argument('--limit', type=int, default=0, help='debug: use only N training events')
 a = p.parse_args()
@@ -150,6 +151,9 @@ def predict(ds):
 
 
 res = dict(name=name, args=vars(a), time=elapsed)
+# inference cost on the test split (incl. on-the-fly FFT/STFT and data loading)
+t0 = time.time(); predict(ds_test); res['infer_time'] = time.time() - t0; res['n_test'] = len(ds_test)
+print(f"inference: {len(ds_test)} events in {res['infer_time']:.1f} s = {len(ds_test)/res['infer_time']:.0f} events/s")
 splits = (('test', ds_test),) if a.final else (('val', ds_val), ('test', ds_test))
 for split, ds in splits:
     y, score = predict(ds)
@@ -163,10 +167,11 @@ for split, ds in splits:
 print(f'time {elapsed:.0f}s')
 
 if not a.limit:
-    out_dir = 'results_final' if a.final else 'results'
+    out_dir = ('results_final' if a.final else 'results') + (f'_{a.tag}' if a.tag else '')
     os.makedirs(out_dir, exist_ok=True)
     json.dump(res, open(f'{out_dir}/{name}.json', 'w'), indent=1)
     if a.final:
-        os.makedirs('models', exist_ok=True)
-        torch.save(model.state_dict(), f'models/{name}.pt')
+        mdir = 'models' + (f'_{a.tag}' if a.tag else '')
+        os.makedirs(mdir, exist_ok=True)
+        torch.save(model.state_dict(), f'{mdir}/{name}.pt')
 print('DONE', name, flush=True)

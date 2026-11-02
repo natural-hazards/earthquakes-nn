@@ -1,0 +1,51 @@
+{
+ "name": "lstm_svm_L10_wnone_log0_g0.85_e30_l3_h128_d0.3_lr0.0003_c0_s0",
+ "args": {
+  "model": "lstm_svm",
+  "task": "EMT",
+  "duration": 10,
+  "weighting": "none",
+  "log": 0,
+  "seed": 0,
+  "epochs": 30,
+  "gamma": 0.85,
+  "layers": 3,
+  "hidden": 128,
+  "dropout": 0.3,
+  "lr": 0.0003,
+  "clip": 0,
+  "final": true,
+  "tag": "timing",
+  "undersample": 0,
+  "limit": 0
+ },
+ "time": 331.46391558647156,
+ "infer_time": 0.7237284183502197,
+ "n_test": 11952,
+ "test": {
+  "macro_f1": 0.8485095173009993,
+  "f1": [
+   0.7453580901856764,
+   0.984896983905144,
+   0.8152734778121775
+  ],
+  "cm": [
+   [
+    281,
+    164,
+    5
+   ],
+   [
+    10,
+    10923,
+    10
+   ],
+   [
+    13,
+    151,
+    395
+   ]
+  ],
+  "balanced_acc": 0.7764119181656143
+ }
+}

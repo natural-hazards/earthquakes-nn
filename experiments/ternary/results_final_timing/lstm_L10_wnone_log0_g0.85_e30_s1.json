@@ -1,0 +1,51 @@
+{
+ "name": "lstm_L10_wnone_log0_g0.85_e30_s1",
+ "args": {
+  "model": "lstm",
+  "task": "EMT",
+  "duration": 10,
+  "weighting": "none",
+  "log": 0,
+  "seed": 1,
+  "epochs": 30,
+  "gamma": 0.85,
+  "layers": 3,
+  "hidden": 128,
+  "dropout": 0.3,
+  "lr": 0.001,
+  "clip": 0,
+  "final": true,
+  "tag": "timing",
+  "undersample": 0,
+  "limit": 0
+ },
+ "time": 221.84332156181335,
+ "infer_time": 0.42282748222351074,
+ "n_test": 11952,
+ "test": {
+  "macro_f1": 0.8883055739613034,
+  "f1": [
+   0.832183908045977,
+   0.9881635254484202,
+   0.8445692883895131
+  ],
+  "cm": [
+   [
+    362,
+    83,
+    5
+   ],
+   [
+    37,
+    10853,
+    53
+   ],
+   [
+    21,
+    87,
+    451
+   ]
+  ],
+  "balanced_acc": 0.8676726206805326
+ }
+}
