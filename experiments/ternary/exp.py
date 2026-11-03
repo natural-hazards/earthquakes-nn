@@ -23,11 +23,14 @@ from quake.data.transforms import FFTTransform, STFTTransform, ToTensor
 from quake.models.lstm import LSTMModel
 from quake.models.lstm_mhsa import LSTMAttentionModel
 from quake.models.lstm_svm import LSTMAttentionSVMModel
+from quake.models.lstm_fcn import LSTMFCNModel
 from quake.models import EfficientNet, EfficientNetBackbone, HybridViT, Backbone
 from quake.procs.train import train_model, train_svm_model
 
 p = argparse.ArgumentParser()
-p.add_argument('--model', choices=['lstm', 'lstm_attn', 'lstm_svm', 'effnet', 'hvit'], required=True)
+p.add_argument('--model', choices=['lstm', 'lstm_attn', 'lstm_svm', 'lstm_fcn', 'effnet', 'hvit'], required=True)
+p.add_argument('--fcn', choices=['karim', 'small'], default='karim',
+               help='lstm_fcn preset: karim = LSTM 128 + FCN 128/256/128; small = LSTM 16 + FCN 16/16/16 (bachelor thesis)')
 p.add_argument('--task', choices=['EMT', 'E_M', 'T_M', 'E_T'], default='EMT',
                help='ternary, or a binary task; the first class of the name is the positive class (label 0)')
 p.add_argument('--duration', type=int, default=20)
@@ -50,6 +53,8 @@ a = p.parse_args()
 name = f"{a.model}{'' if a.task == 'EMT' else '_' + a.task}_L{a.duration}_w{a.weighting}_log{a.log}_g{a.gamma}_e{a.epochs}"
 if a.model in ('lstm_attn', 'lstm_svm'):
     name += f'_l{a.layers}_h{a.hidden}_d{a.dropout}_lr{a.lr:g}_c{a.clip:g}'
+if a.model == 'lstm_fcn':
+    name += f'_{a.fcn}_lr{a.lr:g}'
 if a.undersample:
     name += f'_u{a.undersample}'
 name += f'_s{a.seed}'
@@ -87,7 +92,7 @@ if a.undersample:
     keep = np.setdiff1d(np.arange(len(y_tr)), drop)
     x_tr, y_tr = x_tr[keep], y_tr[keep]
 
-if a.model in ('lstm', 'lstm_attn', 'lstm_svm'):
+if a.model in ('lstm', 'lstm_attn', 'lstm_svm', 'lstm_fcn'):
     seq_len = x_tr.shape[1]
     fft_size = 1 << (seq_len - 1).bit_length()
     aug = Compose([
@@ -119,6 +124,9 @@ elif a.model == 'lstm_attn':
 elif a.model == 'lstm_svm':
     model = LSTMAttentionSVMModel(channels=3, classes=K, hidden=a.hidden, layers=a.layers, heads=4,
                                   dropout=a.dropout, svm_alpha=1e-6, svm_eta0=1e-3)
+elif a.model == 'lstm_fcn':
+    preset = dict(hidden=128, conv_channels=(128, 256, 128)) if a.fcn == 'karim' else dict(hidden=16, conv_channels=(16, 16, 16))
+    model = LSTMFCNModel(channels=3, classes=K, layers=1, kernels=(8, 5, 3), dropout=0.8, **preset)
 elif a.model == 'effnet':
     model = EfficientNet(backbone=EfficientNetBackbone.B0, in_channels=3, num_classes=K, dropout=0.2)
 else:
