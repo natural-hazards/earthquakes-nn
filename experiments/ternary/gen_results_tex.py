@@ -10,8 +10,8 @@ import torch
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REPO, 'docs', 'results_tables.tex')
 CLASSES = ['E', 'M', 'T']
 LABEL = {'effnet': 'EfficientNet-B0', 'hvit': 'Hybrid CNN--ViT', 'lstm': 'LSTM',
-         'lstm_attn': 'LSTM + self-attention', 'lstm_svm': 'LSTM--SVM'}
-ORDER = ['effnet', 'hvit', 'lstm', 'lstm_svm', 'lstm_attn']
+         'lstm_attn': 'LSTM + self-attention', 'lstm_svm': 'LSTM--SVM', 'lstm_fcn': 'LSTM-FCN'}
+ORDER = ['effnet', 'hvit', 'lstm', 'lstm_fcn', 'lstm_attn']  # LSTM-SVM kept in the code, not reported
 # the --duration argument counts 100-sample units; the data are sampled at 125 Hz
 SEC = {10: 8, 20: 16, 30: 24}
 
@@ -191,16 +191,16 @@ row(r'Weights $\sqrt{w_k}$', 'lstm_L20_wsqrt_log0_g0.85_e30')
 row(r'Weights $w_k$ (inverse frequency)', 'lstm_L20_winverse_log0_g0.85_e30')
 row('Undersampling M to 2,000 events', 'lstm_L20_wnone_log0_g0.85_e30_u2000')
 
-w(r'    \midrule \multicolumn{5}{l}{\emph{(d) Attention-based recurrent models}} \\')
+w(r'    \midrule \multicolumn{5}{l}{\emph{(d) Extended recurrent models}} \\')
 row(r'LSTM + attn., 8 layers $\times$ 64, lr $10^{-3}$, $D = 16$\,s', 'lstm_attn_L20_wnone_log0_g0.85_e30')
 row(r'LSTM + attn., 3 layers $\times$ 128, lr $3\cdot10^{-4}$, $D = 16$\,s', 'lstm_attn_L20_wnone_log0_g0.85_e30_l3_h128_d0.3_lr0.0003_c0')
 row(r'LSTM + attn., 3 layers $\times$ 128, lr $10^{-4}$, $D = 16$\,s', 'lstm_attn_L20_wnone_log0_g0.9_e30_l3_h128_d0.3_lr0.0001_c0')
 row(r'LSTM + attn., 3 layers $\times$ 128, lr $3\cdot10^{-4}$, $D = 8$\,s', 'lstm_attn_L10_wnone_log0_g0.85_e30_l3_h128_d0.3_lr0.0003_c0')
 row(r'LSTM + attn., 3 layers $\times$ 128, lr $10^{-4}$, $D = 8$\,s', 'lstm_attn_L10_wnone_log0_g0.9_e30_l3_h128_d0.3_lr0.0001_c0')
-row(r'LSTM--SVM, lr $3\cdot10^{-4}$, $D = 16$\,s', 'lstm_svm_L20_wnone_log0_g0.85_e30_l3_h128_d0.3_lr0.0003_c0')
-row(r'LSTM--SVM, lr $10^{-4}$, $D = 16$\,s', 'lstm_svm_L20_wnone_log0_g0.9_e30_l3_h128_d0.3_lr0.0001_c0')
-row(r'LSTM--SVM, lr $3\cdot10^{-4}$, $D = 8$\,s', 'lstm_svm_L10_wnone_log0_g0.85_e30_l3_h128_d0.3_lr0.0003_c0')
-row(r'LSTM--SVM, lr $10^{-4}$, $D = 8$\,s', 'lstm_svm_L10_wnone_log0_g0.9_e30_l3_h128_d0.3_lr0.0001_c0')
+row(r'LSTM-FCN, LSTM 128 + FCN 128/256/128, lr $10^{-3}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.85_e30_karim_lr0.001')
+row(r'LSTM-FCN, LSTM 128 + FCN 128/256/128, lr $10^{-4}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.9_e30_karim_lr0.0001')
+row(r'LSTM-FCN, LSTM 16 + FCN 16/16/16, lr $10^{-3}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.85_e30_small_lr0.001')
+row(r'LSTM-FCN, LSTM 16 + FCN 16/16/16, lr $10^{-4}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.9_e30_small_lr0.0001')
 w(r'    \bottomrule')
 w(r'  \end{tabular}')
 w(r'\end{table}')
