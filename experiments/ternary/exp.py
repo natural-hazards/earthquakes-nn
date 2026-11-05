@@ -29,6 +29,8 @@ from quake.procs.train import train_model, train_svm_model
 
 p = argparse.ArgumentParser()
 p.add_argument('--model', choices=['lstm', 'lstm_attn', 'lstm_svm', 'lstm_fcn', 'effnet', 'hvit'], required=True)
+p.add_argument('--input', choices=['fft', 'raw'], default='fft',
+               help='recurrent models: magnitude spectrum (default) or the raw z-scored waveform')
 p.add_argument('--fcn', choices=['karim', 'small'], default='karim',
                help='lstm_fcn preset: karim = LSTM 128 + FCN 128/256/128; small = LSTM 16 + FCN 16/16/16 (bachelor thesis)')
 p.add_argument('--task', choices=['EMT', 'E_M', 'T_M', 'E_T'], default='EMT',
@@ -55,6 +57,8 @@ if a.model in ('lstm_attn', 'lstm_svm'):
     name += f'_l{a.layers}_h{a.hidden}_d{a.dropout}_lr{a.lr:g}_c{a.clip:g}'
 if a.model == 'lstm_fcn':
     name += f'_{a.fcn}_lr{a.lr:g}'
+if a.input == 'raw':
+    name += '_raw'
 if a.undersample:
     name += f'_u{a.undersample}'
 name += f'_s{a.seed}'
@@ -98,8 +102,12 @@ if a.model in ('lstm', 'lstm_attn', 'lstm_svm', 'lstm_fcn'):
     aug = Compose([
         RandomApply(TimeShift(max_shift=0.1), p=0.5), RandomApply(AddNoise(snr_min=15, snr_max=40), p=0.5),
         RandomApply(AmplitudeScale(0.9, 1.1), p=0.3), RandomApply(TimeStretch(0.95, 1.05), p=0.3)])
-    tf_train = nn.Sequential(aug, FFTTransform(fft_size, log=bool(a.log)), ToTensor())
-    tf_test = nn.Sequential(FFTTransform(fft_size, log=bool(a.log)), ToTensor())
+    if a.input == 'raw':
+        tf_train = nn.Sequential(aug, ToTensor())
+        tf_test = ToTensor()
+    else:
+        tf_train = nn.Sequential(aug, FFTTransform(fft_size, log=bool(a.log)), ToTensor())
+        tf_test = nn.Sequential(FFTTransform(fft_size, log=bool(a.log)), ToTensor())
     batch_size = 32
 else:
     aug = Compose([
