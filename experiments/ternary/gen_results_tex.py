@@ -41,7 +41,14 @@ def cm_stats(cm):
 sel = load('results/*.json')
 fin = load('results_final/*.json')
 fin = {cfg: rs for cfg, rs in fin.items() if rs[0]['args'].get('task', 'EMT') == 'EMT'}
-final_by_model = {rs[0]['args']['model']: (cfg, rs) for cfg, rs in fin.items()}
+# per architecture, the final configuration with the best mean validation macro-F1 in the selection runs
+final_by_model = {}
+for cfg, rs in fin.items():
+    m = rs[0]['args']['model']
+    val = np.mean([r['val']['macro_f1'] for r in sel[cfg]]) if cfg in sel else -1
+    if m not in final_by_model or val > final_by_model[m][2]:
+        final_by_model[m] = (cfg, rs, val)
+final_by_model = {m: (cfg, rs) for m, (cfg, rs, _) in final_by_model.items()}
 # training/inference times measured one run at a time on an idle machine (run_timing.sh)
 timing = {cfg: rs for cfg, rs in load('results_final_timing/*.json').items()}
 
@@ -77,7 +84,7 @@ for m in ORDER:
         continue
     cfg, rs = final_by_model[m]
     a = rs[0]['args']
-    inp = 'STFT' if m in ('effnet', 'hvit') else 'FFT'
+    inp = 'STFT' if m in ('effnet', 'hvit') else ('waveform' if a.get('input', 'fft') == 'raw' else 'FFT')
     f1 = np.array([r['test']['f1'] for r in rs])
     macro = [r['test']['macro_f1'] for r in rs]
     params = n_params(cfg)
@@ -197,10 +204,13 @@ row(r'LSTM + attn., 3 layers $\times$ 128, lr $3\cdot10^{-4}$, $D = 16$\,s', 'ls
 row(r'LSTM + attn., 3 layers $\times$ 128, lr $10^{-4}$, $D = 16$\,s', 'lstm_attn_L20_wnone_log0_g0.9_e30_l3_h128_d0.3_lr0.0001_c0')
 row(r'LSTM + attn., 3 layers $\times$ 128, lr $3\cdot10^{-4}$, $D = 8$\,s', 'lstm_attn_L10_wnone_log0_g0.85_e30_l3_h128_d0.3_lr0.0003_c0')
 row(r'LSTM + attn., 3 layers $\times$ 128, lr $10^{-4}$, $D = 8$\,s', 'lstm_attn_L10_wnone_log0_g0.9_e30_l3_h128_d0.3_lr0.0001_c0')
-row(r'LSTM-FCN, LSTM 128 + FCN 128/256/128, lr $10^{-3}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.85_e30_karim_lr0.001')
-row(r'LSTM-FCN, LSTM 128 + FCN 128/256/128, lr $10^{-4}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.9_e30_karim_lr0.0001')
-row(r'LSTM-FCN, LSTM 16 + FCN 16/16/16, lr $10^{-3}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.85_e30_small_lr0.001')
-row(r'LSTM-FCN, LSTM 16 + FCN 16/16/16, lr $10^{-4}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.9_e30_small_lr0.0001')
+row(r'LSTM-FCN 128 / 128-256-128, spectrum, lr $10^{-3}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.85_e30_karim_lr0.001')
+row(r'LSTM-FCN 128 / 128-256-128, spectrum, lr $10^{-4}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.9_e30_karim_lr0.0001')
+row(r'LSTM-FCN 16 / 16-16-16, spectrum, lr $10^{-3}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.85_e30_small_lr0.001')
+row(r'LSTM-FCN 16 / 16-16-16, spectrum, lr $10^{-4}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.9_e30_small_lr0.0001')
+row(r'LSTM-FCN 128 / 128-256-128, raw waveform, lr $10^{-3}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.85_e30_karim_lr0.001_raw')
+row(r'LSTM-FCN 128 / 128-256-128, raw waveform, lr $10^{-3}$, $D = 24$\,s', 'lstm_fcn_L30_wnone_log0_g0.85_e30_karim_lr0.001_raw')
+row(r'LSTM-FCN 16 / 16-16-16, raw waveform, lr $10^{-3}$, $D = 8$\,s', 'lstm_fcn_L10_wnone_log0_g0.85_e30_small_lr0.001_raw')
 w(r'    \bottomrule')
 w(r'  \end{tabular}')
 w(r'\end{table}')
