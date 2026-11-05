@@ -1,0 +1,53 @@
+{
+ "name": "lstm_fcn_L10_wnone_log0_g0.85_e30_karim_lr0.001_raw_s0",
+ "args": {
+  "model": "lstm_fcn",
+  "input": "raw",
+  "fcn": "karim",
+  "task": "EMT",
+  "duration": 10,
+  "weighting": "none",
+  "log": 0,
+  "seed": 0,
+  "epochs": 30,
+  "gamma": 0.85,
+  "layers": 3,
+  "hidden": 128,
+  "dropout": 0.3,
+  "lr": 0.001,
+  "clip": 0,
+  "final": true,
+  "tag": "timing",
+  "undersample": 0,
+  "limit": 0
+ },
+ "time": 189.82885551452637,
+ "infer_time": 0.4877622127532959,
+ "n_test": 11952,
+ "test": {
+  "macro_f1": 0.8849301733213112,
+  "f1": [
+   0.8094674556213017,
+   0.9892844169996368,
+   0.8560386473429952
+  ],
+  "cm": [
+   [
+    342,
+    94,
+    14
+   ],
+   [
+    30,
+    10894,
+    19
+   ],
+   [
+    23,
+    93,
+    443
+   ]
+  ],
+  "balanced_acc": 0.8493362782839968
+ }
+}
