@@ -92,9 +92,9 @@ w('')
 # ---------------------------------------------------------------- Table: precision / recall / accuracy
 w(r'\begin{table}[tb]')
 w(r'  \centering')
-w(r'  \caption{Per-class precision and recall of the final models on the test split '
-  r'(mean over three seeds) and overall accuracy. The majority-class baseline '
-  r'(every event labelled M) has an accuracy of 0.916 and a macro-F1 of 0.319.}')
+w(r'  \caption{Per-class precision and recall of the final models on the test split (mean over three '
+  r'seeds) and overall accuracy. For comparison, the majority-class baseline (every event '
+  r'labelled M) has an accuracy of 0.916 and a macro-F1 of 0.319.}')
 w(r'  \label{tab:prec-rec}')
 w(r'  \begin{tabular}{lcccccccc}')
 w(r'    \toprule')
