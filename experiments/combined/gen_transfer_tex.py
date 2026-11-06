@@ -81,22 +81,25 @@ w('')
 w(r'\begin{table}[tb]')
 w(r'  \centering')
 w(r'  \caption{Model selection for the OKC station: macro-F1 of EfficientNet-B0 on the OKC part '
-  r'of the validation-protocol test split as a function of the record length $D$ and of the '
+  r'of the validation split as a function of the record length $D$ and of the '
   r'training data (selection runs, trained on the training split only; mean $\pm$ std over '
-  r'three seeds). The last column gives the number of the 46 OKC tectonic test events that '
-  r'are recognised.}')
+  r'three seeds). The last column gives the number of the 21 OKC tectonic validation events '
+  r'that are recognised (rounded mean over the seeds).}')
 w(r'  \label{tab:transfer-length}')
 w(r'  \begin{tabular}{llccc}')
 w(r'    \toprule')
 w(r'    Training data & $D$ [s] & Macro-F1 (OKC) & F1$_\mathrm{T}$ (OKC) & T recognised \\')
 w(r'    \midrule')
-for data in ('okc', 'all', 'orig'):
+for data in ('okc', 'all'):  # the SPF-only runs have no OKC events in their validation split
     for D in (8, 16, 20):
         cfg = f'effnet_EMT_{data}_D{D}_log1_lr0.001_g0.85_e30'
         rs = sel[cfg]
-        c = cm(rs, 'okc')
-        w(f"    {DATA[data]} & {D} & {ms(test(rs, 'okc'))} & {f1(rs, 'okc')[2]:.3f} & {c[2, 2]} / 46 \\\\")
-    if data != 'orig':
+        c = np.rint(np.mean([r['val']['okc']['cm'] for r in rs], 0)).astype(int)
+        vf1 = [r['val']['okc']['macro_f1'] for r in rs]
+        vf1t = np.mean([r['val']['okc']['f1'][2] for r in rs])
+        n_t = int(round(np.mean([sum(r['val']['okc']['cm'][2]) for r in rs])))
+        w(f"    {DATA[data]} & {D} & {ms(vf1)} & {vf1t:.3f} & {c[2, 2]} / {n_t} \\\\")
+    if data != 'all':
         w(r'    \midrule')
 w(r'    \bottomrule')
 w(r'  \end{tabular}')
