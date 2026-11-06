@@ -51,6 +51,12 @@ earthquakes-nn/
 └── resources/              # Data files (pickle format)
 ```
 
+## Data
+
+The SPF (Seismic Polygon Frenštát, 1992–2002) and OKC (Ostrava-Krásné Pole, 2007–2023) event data sets
+used in the IJRMMS manuscript are available on Zenodo (CC BY 4.0):
+https://doi.org/10.5281/zenodo.24010919 (`SPF.tar.gz`, `OKC.tar.gz`).
+
 ## Data Format
 
 Seismic events are stored as pickle files containing:
