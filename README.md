@@ -1,5 +1,10 @@
 # Seismic Event Classification with Neural Networks
 
+> Branch `ternary`: three-class classification (quarry blasts / mining-induced / tectonic events) of the
+> Seismic Polygon Frenštát archive and the transfer study to station OKC, i.e. the code of the manuscript
+> *Machine learning approaches to seismic event classification in the Ostrava region* (IJRMMS, submitted).
+> The `main` branch keeps the original binary (two-class) version of the project.
+
 A deep learning framework for classifying seismic events using LSTM and Vision Transformer models. The project processes seismic waveforms from multiple stations and channels (Z, N, E components) to distinguish between different event types.
 
 ## Features
