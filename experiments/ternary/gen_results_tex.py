@@ -1,4 +1,4 @@
-"""Generate docs/results_tables.tex from results/ (selection, validation split) and
+"""Generate results_tables.tex (LaTeX) from results/ (selection, validation split) and
 results_final/ (final models, test split). Numbers are mean ± std over seeds.
 
 Usage: python gen_results_tex.py [output.tex]
@@ -7,7 +7,7 @@ import os, glob, json, sys, collections
 import numpy as np
 import torch
 
-OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REPO, 'docs', 'results_tables.tex')
+OUT = sys.argv[1] if len(sys.argv) > 1 else 'results_tables.tex'
 CLASSES = ['E', 'M', 'T']
 LABEL = {'effnet': 'EfficientNet-B0', 'hvit': 'Hybrid CNN--ViT', 'lstm': 'LSTM',
          'lstm_attn': 'LSTM + self-attention', 'lstm_svm': 'LSTM--SVM', 'lstm_fcn': 'LSTM-FCN'}

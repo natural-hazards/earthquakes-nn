@@ -1,5 +1,5 @@
 """Generate the LaTeX tables for the transfer-to-OKC section from results_s20/ and
-results_final_s20/ (longer OKC records), written to Clanek___IJRMMS/transfer_tables.tex.
+results_final_s20/ (longer OKC records), written to transfer_tables.tex.
 
 Usage: python gen_transfer_tex.py [output.tex]
 """
@@ -7,7 +7,7 @@ import os, sys, glob, json, collections
 import numpy as np
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(REPO, 'Clanek___IJRMMS', 'transfer_tables.tex')
+OUT = sys.argv[1] if len(sys.argv) > 1 else 'transfer_tables.tex'
 SEL, FIN = 'results_s20', 'results_final_s20'
 DATA = {'all': 'SPF + OKC', 'okc': 'OKC only', 'orig': 'SPF only'}
 
